@@ -1,0 +1,10 @@
+.DS_Store
+.build/
+.swiftpm/
+.toolchain/
+.local-tools/
+.smoke-home/
+.vendor-mole-git/
+dist/
+outputs/
+*.xcuserstate

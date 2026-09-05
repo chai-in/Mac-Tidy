@@ -1,0 +1,92 @@
+import Darwin
+import Foundation
+import XCTest
+@testable import MacTidy
+
+final class MoleRunnerTests: XCTestCase {
+    func testPreviewDropsInheritedMutationAuthorizationAndBridgeState() {
+        let preview = MoleCommands.clean(preview: true, externalPath: nil, debug: false, includeSystemCaches: false)
+        let environment = MoleRunner.commandEnvironment(invocation: preview, inherited: [
+            "HOME": "/Users/example",
+            "MOLE_GUI_CONFIRMED": "1",
+            "MOLE_GUI_PURGE_MODE": "remove",
+            "BASH_ENV": "/tmp/injected.sh",
+            "ENV": "/tmp/injected.sh"
+        ])
+        XCTAssertNil(environment["MOLE_GUI_CONFIRMED"])
+        XCTAssertNil(environment["MOLE_GUI_PURGE_MODE"])
+        XCTAssertNil(environment["BASH_ENV"])
+        XCTAssertNil(environment["ENV"])
+        XCTAssertEqual(environment["MOLE_GUI_SYSTEM_CACHES"], "skip")
+        XCTAssertEqual(environment["HOME"], "/Users/example")
+    }
+
+    func testConfirmedMutationGetsOnlyItsOwnBridgeState() {
+        let command = MoleCommands.moveToTrash(paths: ["/tmp/disposable"])
+        let environment = MoleRunner.commandEnvironment(invocation: command, inherited: [
+            "MOLE_GUI_SYSTEM_CACHES": "include"
+        ])
+        XCTAssertEqual(environment["MOLE_GUI_CONFIRMED"], "1")
+        XCTAssertNil(environment["MOLE_GUI_SYSTEM_CACHES"])
+    }
+
+    func testPurgeRecommendationExcludesEveryUncertainCandidate() {
+        for recent in [false, true] {
+            for cloud in [false, true] {
+                for unknown in [false, true] {
+                    let item = PurgeCandidate(
+                        path: "/tmp/project/.build", displayPath: "/tmp/project/.build",
+                        projectPath: "/tmp/project", artifact: ".build", sizeKb: 0,
+                        sizeUnknown: unknown, recent: recent, age: "30d", cloud: cloud
+                    )
+                    if recent || cloud || unknown {
+                        XCTAssertFalse(item.recommended)
+                    } else {
+                        XCTAssertTrue(item.recommended)
+                    }
+                }
+            }
+        }
+    }
+
+    @MainActor
+    func testRunnerCapturesBothStreamsAndExitFailure() async {
+        let runner = MoleRunner(executablePath: "/bin/bash")
+        let finished = expectation(description: "Command exited")
+        runner.runCapture(MoleInvocation(label: "Fixture", arguments: ["-c", "printf 'output'; printf 'diagnostic' >&2; exit 7"], risk: .readOnly)) { result in
+            XCTAssertEqual(result.standardOutput, "output")
+            XCTAssertEqual(result.standardError, "diagnostic")
+            XCTAssertEqual(result.exitCode, 7)
+            XCTAssertFalse(result.succeeded)
+            finished.fulfill()
+        }
+        await fulfillment(of: [finished], timeout: 5)
+        XCTAssertFalse(runner.isRunning)
+        XCTAssertEqual(runner.presentedError, "Fixture failed: diagnostic")
+    }
+
+    @MainActor
+    func testCancellationStopsTermIgnoringChildAndPreservesOutput() async throws {
+        let runner = MoleRunner(executablePath: "/bin/bash")
+        let finished = expectation(description: "Cancelled process and child exited")
+        var childPID: pid_t?
+        runner.runCapture(MoleInvocation(label: "Cancellation fixture", arguments: [
+            "-c", "trap '' TERM; sleep 30 & child=$!; printf '%s\\n' \"$child\"; wait \"$child\""
+        ], risk: .readOnly)) { result in
+            childPID = Int32(result.standardOutput.trimmingCharacters(in: .whitespacesAndNewlines))
+            XCTAssertTrue(result.cancelled)
+            XCTAssertFalse(result.succeeded)
+            finished.fulfill()
+        }
+        try await Task.sleep(nanoseconds: 250_000_000)
+        runner.cancel()
+        await fulfillment(of: [finished], timeout: 8)
+        XCTAssertFalse(runner.isRunning)
+        XCTAssertTrue(runner.activity.contains("Stopped."))
+        let pid = try XCTUnwrap(childPID)
+        for _ in 0..<20 where kill(pid, 0) == 0 {
+            try await Task.sleep(nanoseconds: 50_000_000)
+        }
+        XCTAssertNotEqual(kill(pid, 0), 0, "Child must not continue after Stop completes")
+    }
+}

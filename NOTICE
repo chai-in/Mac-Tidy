@@ -1,0 +1,13 @@
+Mac Tidy
+Copyright (C) 2026 Mac Tidy contributors
+
+Mac Tidy is licensed under the GNU General Public License, version 3 only.
+See LICENSE for the complete terms.
+
+This distribution includes a modified copy of Mole V1.53.0 from upstream
+commit 1b9023b5f151c2d963bbcb9cb658f4824137b8aa. Mole is licensed under the
+GNU General Public License, version 3. Its copyright and contributor notices
+remain in Vendor/Mole.
+
+Mac Tidy is an independent project. It is not endorsed by or affiliated with
+the Mole project. “Mole” identifies the bundled upstream engine only.

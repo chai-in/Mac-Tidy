@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+    <key>CFBundleDisplayName</key>
+    <string>Mac Tidy</string>
+    <key>CFBundleExecutable</key>
+    <string>MacTidy</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.chai.mactidy</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+	<key>CFBundleName</key>
+	<string>Mac Tidy</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.utilities</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0.0</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+    <key>MoleEngineVersion</key>
+    <string>1.53.0</string>
+    <key>MoleEngineCommit</key>
+    <string>1b9023b5f151c2d963bbcb9cb658f4824137b8aa</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>14.0</string>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+	<key>NSHumanReadableCopyright</key>
+	<string>Mac Tidy contributors · GNU GPL v3</string>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>Mac Tidy may ask Finder to reveal or move selected files and ask selected applications to quit during uninstall.</string>
+	<key>NSPrincipalClass</key>
+	<string>NSApplication</string>
+</dict>
+</plist>
