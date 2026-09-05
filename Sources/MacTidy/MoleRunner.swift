@@ -131,7 +131,7 @@ final class MoleRunner: ObservableObject {
         guard !didBootstrap else { return }
         didBootstrap = true
         guard isAvailable else { return }
-        runCapture(MoleCommands.version, showActivity: false) { [weak self] result in
+        runCapture(MoleCommands.version, recordActivity: false) { [weak self] result in
             guard let self else { return }
             guard result.succeeded else {
                 self.executablePath = nil
@@ -150,7 +150,7 @@ final class MoleRunner: ObservableObject {
     }
 
     func refreshStatus() {
-        runCapture(MoleCommands.statusJSON, showActivity: false) { [weak self] result in
+        runCapture(MoleCommands.statusJSON, recordActivity: false) { [weak self] result in
             guard let self, result.succeeded else { return }
             self.decode(StatusSnapshot.self, from: result.standardOutputData, description: "system health") {
                 self.status = $0
@@ -194,7 +194,7 @@ final class MoleRunner: ObservableObject {
     }
 
     func refreshInstalledApps(completion: (([InstalledApplication]) -> Void)? = nil) {
-        runCapture(MoleCommands.uninstallList, showActivity: false) { [weak self] result in
+        runCapture(MoleCommands.uninstallList, recordActivity: false) { [weak self] result in
             guard let self, result.succeeded else { return }
             self.decode([InstalledApplication].self, from: result.standardOutputData, description: "application inventory") {
                 self.installedApps = $0
@@ -204,7 +204,7 @@ final class MoleRunner: ObservableObject {
     }
 
     func analyze(path: String?) {
-        runCapture(MoleCommands.analyzeJSON(path: path), showActivity: false) { [weak self] result in
+        runCapture(MoleCommands.analyzeJSON(path: path), recordActivity: false) { [weak self] result in
             guard let self, result.succeeded else { return }
             self.decode(DiskAnalysis.self, from: result.standardOutputData, description: "storage analysis") {
                 self.diskAnalysis = $0
@@ -225,7 +225,7 @@ final class MoleRunner: ObservableObject {
     }
 
     func refreshInstallerCandidates(debug: Bool, completion: (([InstallerCandidate]) -> Void)? = nil) {
-        runCapture(MoleCommands.installersList(debug: debug), showActivity: false) { [weak self] result in
+        runCapture(MoleCommands.installersList(debug: debug), recordActivity: false) { [weak self] result in
             guard let self, result.succeeded else { return }
             self.decode([InstallerCandidate].self, from: result.standardOutputData, description: "installer inventory") {
                 self.installerCandidates = $0
@@ -239,7 +239,7 @@ final class MoleRunner: ObservableObject {
         debug: Bool,
         completion: (([PurgeCandidate]) -> Void)? = nil
     ) {
-        runCapture(MoleCommands.purgeList(includeEmpty: includeEmpty, debug: debug), showActivity: false) { [weak self] result in
+        runCapture(MoleCommands.purgeList(includeEmpty: includeEmpty, debug: debug), recordActivity: false) { [weak self] result in
             guard let self, result.succeeded else { return }
             self.decode([PurgeCandidate].self, from: result.standardOutputData, description: "project artifact inventory") {
                 self.purgeCandidates = $0
@@ -253,7 +253,7 @@ final class MoleRunner: ObservableObject {
     }
 
     func refreshWhitelist(_ mode: WhitelistMode) {
-        runCapture(MoleCommands.whitelistList(mode), showActivity: false) { [weak self] result in
+        runCapture(MoleCommands.whitelistList(mode), recordActivity: false) { [weak self] result in
             guard let self, result.succeeded else { return }
             self.decode(WhitelistCatalog.self, from: result.standardOutputData, description: "protection settings") { catalog in
                 if mode == .clean {
@@ -274,7 +274,7 @@ final class MoleRunner: ObservableObject {
     }
 
     func refreshPurgePaths() {
-        runCapture(MoleCommands.purgePathsList, showActivity: false) { [weak self] result in
+        runCapture(MoleCommands.purgePathsList, recordActivity: false) { [weak self] result in
             guard let self, result.succeeded else { return }
             self.decode(PurgePathsCatalog.self, from: result.standardOutputData, description: "project scan paths") {
                 self.purgePathsCatalog = $0
@@ -291,7 +291,7 @@ final class MoleRunner: ObservableObject {
     }
 
     func refreshTouchIDStatus() {
-        runCapture(MoleCommands.touchIDStatus, showActivity: false) { [weak self] result in
+        runCapture(MoleCommands.touchIDStatus, recordActivity: false) { [weak self] result in
             guard let self, result.succeeded else { return }
             self.decode(TouchIDStatus.self, from: result.standardOutputData, description: "Touch ID status") {
                 self.touchIDStatus = $0
@@ -300,7 +300,7 @@ final class MoleRunner: ObservableObject {
     }
 
     func refreshHistory(limit: Int) {
-        runCapture(MoleCommands.history(limit: limit), showActivity: false) { [weak self] result in
+        runCapture(MoleCommands.history(limit: limit), recordActivity: false) { [weak self] result in
             guard let self, result.succeeded else { return }
             self.decode(HistoryReport.self, from: result.standardOutputData, description: "activity history") {
                 self.historyData = result.standardOutputData
@@ -311,7 +311,7 @@ final class MoleRunner: ObservableObject {
 
     func runCapture(
         _ invocation: MoleInvocation,
-        showActivity: Bool = true,
+        recordActivity: Bool = true,
         completion: ((CommandResult) -> Void)? = nil
     ) {
         if invocation.risk.requiresNativeConfirmation && invocation.environment["MOLE_GUI_CONFIRMED"] != "1" {
@@ -341,17 +341,16 @@ final class MoleRunner: ObservableObject {
 
         let runID = UUID()
         currentRunID = runID
-        let capture = ProcessOutputCapture(format: invocation.outputFormat, displayEnabled: showActivity)
+        let capture = ProcessOutputCapture(format: invocation.outputFormat, displayEnabled: recordActivity && showsActivity)
         currentCapture = capture
-        streamsActivity = showActivity
+        streamsActivity = recordActivity
         cancelRequested = false
         activeLabel = invocation.label
         isRunning = true
-        if showActivity {
+        if recordActivity {
             activity = ""
             lastExitCode = nil
             lastOutputError = nil
-            showsActivity = true
         }
 
         do {
@@ -425,16 +424,15 @@ final class MoleRunner: ObservableObject {
                 self.cancelRequested = false
                 self.activeLabel = nil
                 self.isRunning = false
-                if showActivity || !result.succeeded {
+                if recordActivity || !result.succeeded {
                     self.lastExitCode = exitCode
                     self.lastOutputError = result.outputError
                 }
 
-                if showActivity || !result.succeeded {
+                if recordActivity || !result.succeeded {
                     self.activity = wasCancelled
                         ? [result.displayOutput, "Stopped. Changes already completed are not undone."].filter { !$0.isEmpty }.joined(separator: "\n\n")
                         : (result.displayOutput.isEmpty ? "Finished successfully." : result.displayOutput)
-                    self.showsActivity = true
                 }
                 if !result.succeeded && !wasCancelled {
                     self.presentedError = Self.failureMessage(for: result)
@@ -469,14 +467,6 @@ final class MoleRunner: ObservableObject {
         if showsActivity, streamsActivity, let snapshot = currentCapture?.snapshot(consumingUpdate: true) {
             activity = ConsoleOutput.display(stdout: snapshot.stdout, stderr: snapshot.stderr, truncated: snapshot.truncated)
         }
-    }
-
-    func clearActivity() {
-        guard !isRunning else { return }
-        activity = ""
-        lastExitCode = nil
-        lastOutputError = nil
-        showsActivity = false
     }
 
     func copyActivity() {

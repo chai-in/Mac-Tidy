@@ -34,7 +34,11 @@ validation, file operations, and history records.
 Read-only scans and previews never receive the app's mutation confirmation
 token. Actions that change files require a native confirmation dialog.
 Recoverable actions use Trash where Mole supports it; permanent actions are
-clearly labeled. Long-running work can be stopped from the Activity panel.
+clearly labeled. Long-running work can be stopped from the toolbar or Activity panel.
+Activity output stays hidden until you click **Show Activity** at the bottom.
+You can hide it while work continues and reopen it without losing the output.
+Starting, completing, cancelling, or failing an action never opens it automatically;
+errors still appear in native alerts.
 
 Packaged builds only run their bundled engine. Development builds may use
 `MAC_TIDY_EXECUTABLE` or an installed `mo` executable when the bundled engine

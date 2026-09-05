@@ -64,7 +64,7 @@ final class StatusStreamTests: XCTestCase {
         let pid = try XCTUnwrap(Int32(String(contentsOf: fixture.directory.appendingPathComponent("pid")).trimmingCharacters(in: .whitespacesAndNewlines)))
 
         let finished = expectation(description: "Foreground action completed")
-        runner.runCapture(MoleCommands.version, showActivity: false) { result in
+        runner.runCapture(MoleCommands.version, recordActivity: false) { result in
             XCTAssertTrue(result.succeeded)
             finished.fulfill()
         }

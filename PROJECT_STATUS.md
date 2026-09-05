@@ -3,7 +3,7 @@
 ## Product
 
 - Native macOS maintenance GUI with a bundled engine.
-- Application version: `1.0.2`.
+- Application version: `1.0.3`.
 - Bundle identifier: `com.chai.mactidy`.
 - Deployment target: macOS 14 or later.
 - Builds support Apple silicon only (`arm64`).
@@ -44,9 +44,13 @@ notarization credentials. Source publication does not require those credentials.
 
 ## Verification on 2026-09-05
 
-- The native app passed 39 Swift tests, including large-file decoding,
+- The native app passed 40 Swift tests, including large-file decoding,
   confirmation isolation, uncertain purge selection, process-tree cancellation,
   and complete pagination with bounded rows.
+- Version 1.0.3 keeps activity output collapsed until the user opens it from
+  the bottom control. Starting, completing, failing, or cancelling a command
+  preserves the user's visibility choice. Hidden output remains available,
+  and errors still use native alerts.
 - Version 1.0.2 bounds and batches activity output, avoids JSON text round trips,
   isolates activity rendering, and reuses the engine's watch collector only
   while automatic status refresh is active. Scans use direct bundled helpers,

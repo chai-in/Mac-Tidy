@@ -54,7 +54,7 @@ final class MoleRunnerTests: XCTestCase {
     func testRunnerCapturesBothStreamsAndExitFailure() async {
         let runner = MoleRunner(executablePath: "/bin/bash")
         let finished = expectation(description: "Command exited")
-        runner.runCapture(MoleInvocation(label: "Fixture", arguments: ["-c", "printf 'output'; printf 'diagnostic' >&2; exit 7"], risk: .readOnly)) { result in
+        runner.runCapture(MoleInvocation(label: "Fixture", arguments: ["-c", "printf 'output'; printf 'diagnostic' >&2; exit 7"], risk: .readOnly), recordActivity: false) { result in
             XCTAssertEqual(result.standardOutput, "output")
             XCTAssertEqual(result.standardError, "diagnostic")
             XCTAssertEqual(result.exitCode, 7)
@@ -63,7 +63,28 @@ final class MoleRunnerTests: XCTestCase {
         }
         await fulfillment(of: [finished], timeout: 5)
         XCTAssertFalse(runner.isRunning)
+        XCTAssertFalse(runner.showsActivity, "Background failures must not open the output panel")
+        XCTAssertTrue(runner.activity.contains("diagnostic"))
         XCTAssertEqual(runner.presentedError, "Fixture failed: diagnostic")
+    }
+
+    @MainActor
+    func testCompletedActivityOnlyOpensOnRequestAndRemainsAvailableAfterHiding() async {
+        let runner = MoleRunner(executablePath: "/bin/bash")
+        let finished = expectation(description: "Hidden command completed")
+        runner.runCapture(.init(label: "Preview", arguments: ["-c", "printf 'preview details'"], risk: .preview)) { _ in
+            finished.fulfill()
+        }
+        XCTAssertFalse(runner.showsActivity, "Starting a command must not open the panel")
+        await fulfillment(of: [finished], timeout: 5)
+        XCTAssertFalse(runner.showsActivity, "Finishing a command must not open the panel")
+        XCTAssertTrue(runner.activity.contains("preview details"))
+
+        runner.toggleActivity()
+        XCTAssertTrue(runner.showsActivity)
+        runner.toggleActivity()
+        XCTAssertFalse(runner.showsActivity)
+        XCTAssertTrue(runner.activity.contains("preview details"), "Hiding the panel must preserve its output")
     }
 
     @MainActor
@@ -74,6 +95,7 @@ final class MoleRunnerTests: XCTestCase {
             "-c", "printf 'Optimize\\n\\nDry run mode\\n  ◎ Failed to scan shared file lists\\nSummary: 1 failed\\n'; exit 1"
         ], risk: .preview)) { _ in finished.fulfill() }
         await fulfillment(of: [finished], timeout: 5)
+        XCTAssertFalse(runner.showsActivity, "Preview failures must not open the output panel")
         XCTAssertTrue(runner.presentedError?.contains("Failed to scan shared file lists") == true)
         XCTAssertFalse(runner.presentedError?.contains("failed: Optimize") == true)
     }
@@ -116,6 +138,7 @@ final class MoleRunnerTests: XCTestCase {
         runner.cancel()
         await fulfillment(of: [finished], timeout: 8)
         XCTAssertFalse(runner.isRunning)
+        XCTAssertFalse(runner.showsActivity, "Cancellation must not open the output panel")
         XCTAssertTrue(runner.activity.contains("Stopped."))
         let pid = try XCTUnwrap(childPID)
         for _ in 0..<20 where kill(pid, 0) == 0 {

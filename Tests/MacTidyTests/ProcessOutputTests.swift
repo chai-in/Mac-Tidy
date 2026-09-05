@@ -94,11 +94,18 @@ final class ProcessOutputTests: XCTestCase {
         ], risk: .readOnly)) { _ in
             done.fulfill()
         }
+        XCTAssertFalse(runner.showsActivity)
+        runner.toggleActivity()
         await fulfillment(of: [progress], timeout: 3)
         XCTAssertTrue(runner.isRunning)
+        XCTAssertTrue(runner.showsActivity)
         XCTAssertTrue(runner.activity.contains("ready"))
+        runner.toggleActivity()
+        XCTAssertFalse(runner.showsActivity)
         try Data().write(to: release)
         await fulfillment(of: [done], timeout: 4)
+        XCTAssertFalse(runner.showsActivity, "Finishing must not reopen a panel closed during the operation")
+        XCTAssertTrue(runner.activity.contains("done"))
         withExtendedLifetime(observation) {}
     }
 }

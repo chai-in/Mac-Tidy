@@ -34,6 +34,27 @@ struct ContentView: View {
                     ActivityPanel(activityState: runner.activityState)
                         .frame(minHeight: 150, idealHeight: 210, maxHeight: 280)
                 }
+
+                Divider()
+                HStack {
+                    Button {
+                        runner.toggleActivity()
+                    } label: {
+                        Label(runner.showsActivity ? "Hide Activity" : "Show Activity",
+                              systemImage: runner.showsActivity ? "chevron.down" : "chevron.up")
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityValue(runner.showsActivity ? "Expanded" : "Collapsed")
+                    Spacer()
+                    if !runner.isRunning && runner.lastExitCode != nil {
+                        Text("Activity available")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .font(.caption)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 9)
+                .background(.bar)
             }
             .background(Color(nsColor: .windowBackgroundColor))
             .toolbar {
@@ -47,14 +68,6 @@ struct ContentView: View {
                                 .disabled(runner.cancelRequested)
                         }
                     }
-                }
-                ToolbarItem {
-                    Button {
-                        runner.toggleActivity()
-                    } label: {
-                        Label("Activity", systemImage: "list.bullet.rectangle")
-                    }
-                    .help(runner.showsActivity ? "Hide activity" : "Show activity")
                 }
             }
         }
@@ -308,12 +321,11 @@ struct ActivityPanel: View {
                 .disabled(activityState.text.isEmpty)
                 .help("Copy activity")
                 Button {
-                    runner.clearActivity()
+                    runner.toggleActivity()
                 } label: {
                     Image(systemName: "xmark")
                 }
                 .buttonStyle(.plain)
-                .disabled(runner.isRunning)
                 .help("Close activity")
             }
             .padding(.horizontal, 14)
