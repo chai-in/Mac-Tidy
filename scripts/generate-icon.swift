@@ -26,6 +26,8 @@ let gradient = NSGradient(colors: [
 ])!
 gradient.draw(in: tile, angle: -55)
 
+NSGraphicsContext.saveGraphicsState()
+tile.addClip()
 NSColor.white.withAlphaComponent(0.10).setFill()
 NSBezierPath(ovalIn: NSRect(x: size * 0.05, y: size * 0.47, width: size * 0.90, height: size * 0.58)).fill()
 
@@ -87,6 +89,7 @@ func sparkle(x: Double, y: Double, radius: Double) {
 sparkle(x: 0.70, y: 0.75, radius: 0.085)
 sparkle(x: 0.48, y: 0.28, radius: 0.055)
 
+NSGraphicsContext.restoreGraphicsState()
 image.unlockFocus()
 
 guard let data = image.tiffRepresentation,

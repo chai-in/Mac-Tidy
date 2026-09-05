@@ -180,4 +180,14 @@ final class MoleCommandTests: XCTestCase {
         XCTAssertTrue(purge.recommended)
         XCTAssertEqual(purge.sizeBytes, 1_048_576)
     }
+
+    func testAnalysisDecodesLargeFileRowsWithoutDirectoryFlag() throws {
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        let json = #"{"path":"/tmp/fixture","overview":false,"entries":[{"name":"folder","path":"/tmp/fixture/folder","size":120000000,"is_dir":true}],"large_files":[{"name":"large.bin","path":"/tmp/fixture/folder/large.bin","size":120000000}],"total_size":120000000}"#
+        let analysis = try decoder.decode(DiskAnalysis.self, from: Data(json.utf8))
+        XCTAssertTrue(analysis.entries[0].isDir)
+        XCTAssertFalse(try XCTUnwrap(analysis.largeFiles?.first).isDir)
+        XCTAssertEqual(analysis.largeFiles?.first?.size, 120_000_000)
+    }
 }

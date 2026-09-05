@@ -12,6 +12,7 @@ LIB_DIR="$(cd "$SCRIPT_DIR/../lib" && pwd)"
 # Source common functions
 # shellcheck source=../lib/core/common.sh
 source "$LIB_DIR/core/common.sh"
+source "$LIB_DIR/core/gui.sh"
 
 # Set up global cleanup trap
 trap cleanup_temp_files EXIT INT TERM
@@ -389,12 +390,16 @@ main() {
         return 0
     fi
 
+    if [[ "$command" == "enable" || "$command" == "disable" ]]; then
+        mole_gui_require_confirmation || return $?
+    fi
+
     if touchid_dry_run_enabled; then
         echo -e "${YELLOW}${ICON_DRY_RUN} DRY RUN MODE${NC}, No sudo authentication files will be modified"
         echo ""
     fi
 
-    if [[ "${MOLE_GUI_CONFIRMED:-0}" == "1" && "${MOLE_DRY_RUN:-0}" != "1" && ( "$command" == "enable" || "$command" == "disable" ) ]]; then
+    if [[ "${MOLE_GUI_CONFIRMED:-0}" == "1" && "${MOLE_DRY_RUN:-0}" != "1" && ("$command" == "enable" || "$command" == "disable") ]]; then
         if ! ensure_sudo_session "Touch ID configuration requires admin access"; then
             log_error "Admin access not granted"
             return 1

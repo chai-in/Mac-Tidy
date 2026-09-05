@@ -321,6 +321,8 @@ struct AnalyzeView: View {
                     .foregroundStyle(selection.contains(entry.path) ? .green : .secondary)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Select \(entry.name)")
+            .accessibilityValue(selection.contains(entry.path) ? "Selected" : "Not selected")
 
             Image(systemName: entry.isDir ? "folder.fill" : "doc.fill")
                 .foregroundStyle(entry.isDir ? .blue : .secondary)
@@ -890,7 +892,7 @@ struct InstallersView: View {
                 }
             }
         } message: {
-            Text("\(selection.count) files totaling \(ByteFormat.string(selectedSize)) will be permanently removed. Mole will refuse the complete action if any selection changed since the scan.")
+            Text("\(selection.count) files totaling \(ByteFormat.string(selectedSize)) will be permanently removed. Mole rebuilds the current plan and checks each file immediately before removal.")
         }
     }
 

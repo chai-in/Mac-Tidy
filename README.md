@@ -67,7 +67,9 @@ Build the verified Apple silicon local preview:
 The packaging script tests the Swift and Go code, builds `arm64` binaries,
 embeds the engine and license notices, ad-hoc signs the app, verifies
 the bundle, smoke-tests the packaged engine, and creates a DMG, app ZIP, and
-corresponding-source ZIP in `dist/`.
+corresponding-source ZIP in `dist/`. The source ZIP also includes the Go
+dependency source needed to rebuild the engine. Checksums are written to
+`dist/SHA256SUMS.txt`.
 
 Generated previews are not Developer ID signed or Apple-notarized. macOS may
 block the first open. Open **System Settings > Privacy & Security**, find the

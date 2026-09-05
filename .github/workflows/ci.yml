@@ -23,8 +23,8 @@ jobs:
       - name: Validate scripts
         run: |
           zsh -n scripts/build-app.sh
-          bash -n Vendor/Mole/mole Vendor/Mole/mo Vendor/Mole/install.sh
-          find Vendor/Mole/bin Vendor/Mole/lib -type f -name '*.sh' -exec bash -n {} +
+          for script in Vendor/Mole/mole Vendor/Mole/mo Vendor/Mole/install.sh; do bash -n "$script"; done
+          find Vendor/Mole/bin Vendor/Mole/lib -type f -name '*.sh' -print0 | xargs -0 -n1 bash -n
 
       - name: Test native app
         run: swift test --scratch-path /tmp/mac-tidy-ci-swift
@@ -32,3 +32,18 @@ jobs:
       - name: Test bundled engine
         working-directory: Vendor/Mole
         run: go test ./...
+
+      - name: Test native confirmation and administrator prompt routing
+        run: |
+          command -v bats || brew install bats-core
+          MOLE_TEST_NO_AUTH=1 bats Vendor/Mole/tests/gui_bridge.bats Vendor/Mole/tests/manage_sudo.bats
+
+      - name: Exercise native bridge with disposable data
+        working-directory: Vendor/Mole
+        env:
+          CGO_ENABLED: '0'
+          GOARCH: arm64
+        run: |
+          go build -o bin/analyze-go ./cmd/analyze
+          go build -o bin/status-go ./cmd/status
+          python3 ../../scripts/smoke-engine.py ./mole

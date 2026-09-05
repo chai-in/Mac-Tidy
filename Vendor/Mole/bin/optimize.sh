@@ -230,6 +230,7 @@ main() {
         esac
     done
 
+    mole_gui_require_confirmation || return $?
     log_operation_session_start "optimize"
 
     trap 'cleanup_all "$?"' EXIT

@@ -10,6 +10,7 @@ export LANG=C
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../lib/core/common.sh"
+source "$SCRIPT_DIR/../lib/core/gui.sh"
 
 source "$SCRIPT_DIR/../lib/core/sudo.sh"
 source "$SCRIPT_DIR/../lib/clean/brew.sh"
@@ -1481,7 +1482,11 @@ start_cleanup() {
         write_clean_preview_header
 
         # Preview system section when sudo is already cached (no password prompt).
-        if adopt_sudo_session; then
+        if [[ "${MOLE_GUI_SYSTEM_CACHES:-}" == "skip" ]]; then
+            SYSTEM_CLEAN=false
+            echo "  ${ICON_LIST} System-level preview skipped"
+            echo ""
+        elif adopt_sudo_session; then
             SYSTEM_CLEAN=true
             echo -e "${GREEN}${ICON_SUCCESS}${NC} Admin access available, system preview included"
             echo ""
@@ -2088,6 +2093,7 @@ main() {
         shift
     done
 
+    mole_gui_require_confirmation || return $?
     start_cleanup
     hide_cursor
     local cleanup_rc=0

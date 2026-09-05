@@ -85,7 +85,9 @@ request_sudo_access() {
     local tty_path="/dev/tty"
     local is_gui_mode=false
 
-    if [[ ! -r "$tty_path" || ! -w "$tty_path" ]]; then
+    if [[ "${MOLE_GUI_MODE:-0}" == "1" ]]; then
+        is_gui_mode=true
+    elif [[ ! -r "$tty_path" || ! -w "$tty_path" ]]; then
         tty_path=$(tty 2> /dev/null || echo "")
         if [[ -z "$tty_path" || ! -r "$tty_path" || ! -w "$tty_path" ]]; then
             is_gui_mode=true
@@ -106,7 +108,9 @@ request_sudo_access() {
         local escaped_msg="${prompt_msg//\\/\\\\}"
         escaped_msg="${escaped_msg//\"/\\\"}"
         local password
-        password=$(osascript -e "display dialog \"$escaped_msg\" default answer \"\" with title \"Mole\" with icon caution with hidden answer" -e 'text returned of result' 2> /dev/null)
+        local dialog_title="Mole"
+        [[ "${MOLE_GUI_MODE:-0}" != "1" ]] || dialog_title="Mac Tidy"
+        password=$(osascript -e "display dialog \"$escaped_msg\" default answer \"\" with title \"$dialog_title\" with icon caution with hidden answer" -e 'text returned of result' 2> /dev/null)
 
         if [[ -z "$password" ]]; then
             # User cancelled the dialog

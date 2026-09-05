@@ -57,6 +57,11 @@ swift_bin_dir="$(swift build -c release --arch arm64 \
         "$GO_TOOL" build -trimpath -ldflags='-s -w' -o "$ENGINE_BUILD/analyze-go" ./cmd/analyze
     GOCACHE="$GO_CACHE" CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 \
         "$GO_TOOL" build -trimpath -ldflags='-s -w' -o "$ENGINE_BUILD/status-go" ./cmd/status
+    if [[ -d "$VENDOR_DIR/vendor" ]]; then
+        ditto "$VENDOR_DIR/vendor" "$PACKAGE_TEMP/go-vendor"
+    else
+        "$GO_TOOL" mod vendor -o "$PACKAGE_TEMP/go-vendor"
+    fi
 )
 
 mkdir -p "$CONTENTS/MacOS" "$CONTENTS/Resources" "$ENGINE_PATH" "$ICON_WORK"
@@ -72,6 +77,20 @@ ditto "$VENDOR_DIR/MODIFICATIONS.md" "$ENGINE_PATH/MODIFICATIONS.md"
 ditto "$VENDOR_DIR/TRADEMARK.md" "$ENGINE_PATH/TRADEMARK.md"
 ditto "$ENGINE_BUILD/analyze-go" "$ENGINE_PATH/bin/analyze-go"
 ditto "$ENGINE_BUILD/status-go" "$ENGINE_PATH/bin/status-go"
+python3 - "$PACKAGE_TEMP/go-vendor" "$CONTENTS/Resources/ThirdPartyNotices.txt" <<'PY'
+from pathlib import Path
+import sys
+
+source = Path(sys.argv[1])
+notices = ["Mac Tidy includes the following open-source library notices.\n"]
+for path in sorted(source.rglob("*")):
+    if path.is_file() and path.name.upper().startswith(("LICENSE", "COPYING", "NOTICE")):
+        notices.append("\n--- " + str(path.relative_to(source)) + " ---\n")
+        notices.append(path.read_text(errors="replace"))
+if len(notices) == 1:
+    raise SystemExit("No third-party license notices found")
+Path(sys.argv[2]).write_text("\n".join(notices))
+PY
 
 BASE_ICON="$PACKAGE_TEMP/mac-tidy-1024.png"
 swift "$PROJECT_DIR/scripts/generate-icon.swift" "$BASE_ICON" 1024
@@ -86,6 +105,8 @@ xattr -cr "$APP_PATH"
 for binary in "$CONTENTS/MacOS/$EXECUTABLE_NAME" "$ENGINE_PATH/bin/analyze-go" "$ENGINE_PATH/bin/status-go"; do
     [[ "$(/usr/bin/lipo -archs "$binary")" == "arm64" ]]
 done
+"$VENDOR_DIR/scripts/check_release_minos.sh" --max 14.0 \
+    "$CONTENTS/MacOS/$EXECUTABLE_NAME" "$ENGINE_PATH/bin/analyze-go" "$ENGINE_PATH/bin/status-go"
 codesign --force --sign - "$ENGINE_PATH/bin/analyze-go"
 codesign --force --sign - "$ENGINE_PATH/bin/status-go"
 codesign --force --sign - "$CONTENTS/MacOS/$EXECUTABLE_NAME"
@@ -114,19 +135,25 @@ fi
 env -i HOME="$PACKAGE_TEMP/smoke-home" PATH="/usr/bin:/bin:/usr/sbin:/sbin" NO_COLOR=1 \
     "$ENGINE_PATH/mole" touchid --gui-status > "$PACKAGE_TEMP/touchid-status.json"
 plutil -p "$PACKAGE_TEMP/touchid-status.json" >/dev/null
+python3 "$PROJECT_DIR/scripts/smoke-engine.py" "$ENGINE_PATH/mole"
 
-mkdir -p "$SOURCE_PATH/Vendor"
-ditto "$PROJECT_DIR/Sources" "$SOURCE_PATH/Sources"
-ditto "$PROJECT_DIR/Tests" "$SOURCE_PATH/Tests"
-ditto "$PROJECT_DIR/Resources" "$SOURCE_PATH/Resources"
-ditto "$PROJECT_DIR/scripts" "$SOURCE_PATH/scripts"
-ditto "$PROJECT_DIR/.github" "$SOURCE_PATH/.github"
-for file in .gitattributes .gitignore Package.swift README.md LICENSE NOTICE CONTRIBUTING.md SECURITY.md PROJECT_STATUS.md; do
-    ditto "$PROJECT_DIR/$file" "$SOURCE_PATH/$file"
-done
-ditto "$VENDOR_DIR" "$SOURCE_PATH/Vendor/Mole"
-rm -rf -- "$SOURCE_PATH/Vendor/Mole/.git"
-rm -f -- "$SOURCE_PATH/Vendor/Mole/bin/analyze-go" "$SOURCE_PATH/Vendor/Mole/bin/status-go"
+mkdir -p "$SOURCE_PATH"
+if [[ -e "$PROJECT_DIR/.git" ]]; then
+    # Include current source, including new files, while excluding local tools,
+    # test fixtures, binaries, and build products through the repository ignores.
+    git -C "$PROJECT_DIR" ls-files -z --cached --others --exclude-standard > "$PACKAGE_TEMP/source-files"
+    /usr/bin/tar -C "$PROJECT_DIR" -cf - --null -T "$PACKAGE_TEMP/source-files" | /usr/bin/tar -C "$SOURCE_PATH" -xf -
+else
+    # Corresponding-source archives can be rebuilt without Git metadata.
+    for directory in Sources Tests Resources scripts Vendor .github; do
+        /usr/bin/tar -C "$PROJECT_DIR" --exclude='.git' --exclude='tests/tmp-*' \
+            --exclude='bin/analyze-go' --exclude='bin/status-go' -cf - "$directory" | /usr/bin/tar -C "$SOURCE_PATH" -xf -
+    done
+    for file in .gitattributes .gitignore Package.swift README.md LICENSE NOTICE CONTRIBUTING.md SECURITY.md PROJECT_STATUS.md; do
+        ditto "$PROJECT_DIR/$file" "$SOURCE_PATH/$file"
+    done
+fi
+ditto "$PACKAGE_TEMP/go-vendor" "$SOURCE_PATH/Vendor/Mole/vendor"
 
 ditto -c -k --norsrc --keepParent "$APP_PATH" "$APP_ZIP"
 mkdir -p "$PACKAGE_TEMP/dmg"
@@ -151,12 +178,15 @@ FINAL_APP_ZIP="$OUTPUT_DIR/$ARTIFACT_NAME-$VERSION-arm64-unnotarized.zip"
 FINAL_APP_DMG="$OUTPUT_DIR/$ARTIFACT_NAME-$VERSION-arm64-unnotarized.dmg"
 FINAL_SOURCE_ZIP="$OUTPUT_DIR/$ARTIFACT_NAME-$VERSION-source.zip"
 mkdir -p "$OUTPUT_DIR"
-rm -rf -- "$OUTPUT_DIR/$APP_NAME.app"
-rm -f -- "$FINAL_APP_ZIP" "$FINAL_APP_DMG" "$FINAL_SOURCE_ZIP"
 ditto --norsrc "$APP_ZIP" "$FINAL_APP_ZIP"
 ditto --norsrc "$APP_DMG" "$FINAL_APP_DMG"
 ditto --norsrc "$SOURCE_ZIP" "$FINAL_SOURCE_ZIP"
 hdiutil verify "$FINAL_APP_DMG" >/dev/null
+(
+    cd "$OUTPUT_DIR"
+    shasum -a 256 "$ARTIFACT_NAME-$VERSION-arm64-unnotarized.dmg" \
+        "$ARTIFACT_NAME-$VERSION-arm64-unnotarized.zip" "$ARTIFACT_NAME-$VERSION-source.zip" > SHA256SUMS.txt
+)
 
 print -r -- "$FINAL_APP_DMG"
 print -r -- "$FINAL_APP_ZIP"

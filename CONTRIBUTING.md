@@ -5,7 +5,8 @@ GPL-3.0-only, the project's existing license.
 
 ## Development
 
-Mac Tidy requires macOS 14 or later, Xcode with Swift 5.10 or later, and Go
+Mac Tidy targets Apple silicon Macs on macOS 14 or later and requires Xcode
+with Swift 5.10 or later and Go
 1.25 or later.
 
 Before opening a pull request, run:
@@ -15,7 +16,10 @@ swift test
 GOCACHE=/tmp/mac-tidy-go-cache go test ./...
 ```
 
-Run the Go command from `Vendor/Mole`. For changes to bundled shell behavior,
+Run the Go command from `Vendor/Mole`. For changes to the native bridge, also
+run `python3 scripts/smoke-engine.py Vendor/Mole/mole` after building the two Go
+helpers in `Vendor/Mole/bin`. This test changes only disposable fixtures and
+configuration in a temporary home. For changes to bundled shell behavior,
 also run the focused upstream Bats tests named in `Vendor/Mole/AGENTS.md`.
 Packaging changes should pass `./scripts/build-app.sh`.
 

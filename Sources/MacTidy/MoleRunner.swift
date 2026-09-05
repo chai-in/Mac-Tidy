@@ -99,12 +99,14 @@ final class MoleRunner: ObservableObject {
     @Published var presentedError: String?
 
     private var currentProcess: Process?
+    private var currentProcessGroup: pid_t?
     private var currentRunID: UUID?
     @Published private(set) var cancelRequested = false
     private var didBootstrap = false
 
     init(executablePath: String? = MoleExecutableLocator.find()) {
         self.executablePath = executablePath
+        if executablePath == nil { moleVersion = "Unavailable" }
     }
 
     var isAvailable: Bool { executablePath != nil }
@@ -139,13 +141,6 @@ final class MoleRunner: ObservableObject {
                 return
             }
             self.refreshStatus()
-        }
-    }
-
-    func refreshExecutable() {
-        executablePath = MoleExecutableLocator.find()
-        if executablePath == nil {
-            moleVersion = "Unavailable"
         }
     }
 
@@ -316,10 +311,13 @@ final class MoleRunner: ObservableObject {
         do {
             try process.run()
             currentProcess = process
+            let pid = process.processIdentifier
+            currentProcessGroup = getpgid(pid) == pid && pid != getpgrp() ? pid : nil
             try? standardOutputPipe.fileHandleForWriting.close()
             try? standardErrorPipe.fileHandleForWriting.close()
         } catch {
             currentProcess = nil
+            currentProcessGroup = nil
             currentRunID = nil
             isRunning = false
             activeLabel = nil
@@ -376,6 +374,7 @@ final class MoleRunner: ObservableObject {
                 )
 
                 self.currentProcess = nil
+                self.currentProcessGroup = nil
                 self.currentRunID = nil
                 self.cancelRequested = false
                 self.activeLabel = nil
@@ -403,21 +402,19 @@ final class MoleRunner: ObservableObject {
         signalProcess(currentProcess, signal: SIGTERM)
         let runID = currentRunID
         DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self, weak currentProcess] in
-            guard let self, let currentProcess, self.currentRunID == runID,
-                  currentProcess.isRunning else { return }
+            guard let self, let currentProcess, self.currentRunID == runID else { return }
             self.signalProcess(currentProcess, signal: SIGKILL)
         }
     }
 
     private func signalProcess(_ process: Process, signal: Int32) {
-        guard process.isRunning else { return }
-        let pid = process.processIdentifier
         // Foundation launches a separate process group on macOS. Only signal
-        // that group after verifying it cannot include this app or its parent.
-        if getpgid(pid) == pid && pid != getpgrp() {
-            kill(-pid, signal)
-        } else {
-            kill(pid, signal)
+        // the group verified at launch. It may outlive its shell while children
+        // retain the output pipes; keep Stop pending until those pipes close.
+        if let group = currentProcessGroup {
+            kill(-group, signal)
+        } else if process.isRunning {
+            kill(process.processIdentifier, signal)
         }
     }
 
@@ -505,6 +502,7 @@ final class MoleRunner: ObservableObject {
         for (key, value) in invocation.environment {
             environment[key] = value
         }
+        environment["MOLE_GUI_MODE"] = "1"
         if !invocation.risk.requiresNativeConfirmation {
             environment.removeValue(forKey: "MOLE_GUI_CONFIRMED")
         }

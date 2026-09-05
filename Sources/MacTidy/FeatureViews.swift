@@ -360,7 +360,7 @@ struct AboutView: View {
                     .standardButton()
                     .disabled(runner.bundledLicenseURL == nil)
 
-                    Link("Mole Project", destination: URL(string: "https://github.com/tw93/Mole")!)
+                    Link("Mac Tidy Source", destination: URL(string: "https://github.com/chai-in/Mac-Tidy")!)
                         .buttonStyle(.bordered)
                         .controlSize(.large)
                 }
@@ -370,6 +370,7 @@ struct AboutView: View {
                 Text("Mac Tidy is independent from and not endorsed by the Mole project.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                Link("Mole Engine Source", destination: URL(string: "https://github.com/tw93/Mole")!)
             }
 
             MoleCard(

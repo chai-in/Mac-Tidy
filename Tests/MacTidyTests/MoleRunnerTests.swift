@@ -18,6 +18,7 @@ final class MoleRunnerTests: XCTestCase {
         XCTAssertNil(environment["BASH_ENV"])
         XCTAssertNil(environment["ENV"])
         XCTAssertEqual(environment["MOLE_GUI_SYSTEM_CACHES"], "skip")
+        XCTAssertEqual(environment["MOLE_GUI_MODE"], "1")
         XCTAssertEqual(environment["HOME"], "/Users/example")
     }
 
@@ -67,11 +68,21 @@ final class MoleRunnerTests: XCTestCase {
 
     @MainActor
     func testCancellationStopsTermIgnoringChildAndPreservesOutput() async throws {
+        try await checkCancellation(script: "trap '' TERM; sleep 30 & child=$!; printf '%s\\n' \"$child\"; wait \"$child\"")
+    }
+
+    @MainActor
+    func testCancellationStopsChildAfterItsParentHasExited() async throws {
+        try await checkCancellation(script: "/bin/bash -c 'trap \"\" TERM; sleep 30' & child=$!; printf '%s\\n' \"$child\"; wait \"$child\"")
+    }
+
+    @MainActor
+    private func checkCancellation(script: String) async throws {
         let runner = MoleRunner(executablePath: "/bin/bash")
         let finished = expectation(description: "Cancelled process and child exited")
         var childPID: pid_t?
         runner.runCapture(MoleInvocation(label: "Cancellation fixture", arguments: [
-            "-c", "trap '' TERM; sleep 30 & child=$!; printf '%s\\n' \"$child\"; wait \"$child\""
+            "-c", script
         ], risk: .readOnly)) { result in
             childPID = Int32(result.standardOutput.trimmingCharacters(in: .whitespacesAndNewlines))
             XCTAssertTrue(result.cancelled)

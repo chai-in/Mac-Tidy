@@ -38,6 +38,32 @@ source ZIP in `dist`. It runs Swift and Go tests, builds `arm64` executables,
 embeds license and modification notices, signs the local preview ad hoc,
 verifies the bundle and archives, and smoke-tests the packaged engine.
 
-Local artifacts remain explicitly named `unnotarized`. A public binary release
-still requires an Apple Developer ID certificate and notarization credentials.
-Source publication does not require those Apple credentials.
+Local artifacts remain explicitly named `unnotarized`. Developer ID signing
+and Apple notarization require an Apple Developer ID certificate and
+notarization credentials. Source publication does not require those credentials.
+
+## Verification on 2026-09-05
+
+- The native app passed 22 Swift tests, including large-file decoding,
+  confirmation isolation, uncertain purge selection, and process-tree cancellation.
+- All three Go packages passed their tests.
+- The full 1,750-case upstream shell run completed with six failures under
+  load. Each failed case passed focused reruns; the affected failures concerned
+  timing or host-dependent probes. No test thresholds were relaxed.
+- Twelve focused shell tests passed for native confirmation, preview scope,
+  and administrator prompt routing using mocked authorization.
+- Packaged bridge smoke checks passed on disposable data, including configuration
+  save/reload, denied unconfirmed mutations, previews, exact project and installer
+  removals, preserved unselected files, and JSON decoding.
+- Apple silicon builds and minimum macOS versions passed inspection. The
+  ad-hoc signature and DMG checksums passed validation.
+- The source archive includes Go dependency sources and license notices; its
+  analyzer rebuilt with network access disabled and an empty module cache.
+- Native window checks confirmed first-open guidance, the dashboard, existing
+  cleanup protections after reopening the editor, folder analysis, and a
+  128 MiB large-file result.
+- GitHub CI checks the native app, Go packages, native confirmation and prompt
+  routing, and the disposable bridge smoke flows on each push.
+
+No real administrator-protected changes or cleanup of the user's files were
+run. No Developer ID signing identity was available in the local keychain.

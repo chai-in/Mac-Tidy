@@ -15,5 +15,12 @@ machine-readable bridge for the native application:
 - an engine-side confirmation requirement for native destructive actions
 - revalidation of selections at the existing engine safety boundary
 
+On 2026-09-05, the native bridge gained a shared confirmation gate for cleanup,
+optimization, and Touch ID changes. Native launches explicitly select GUI
+authentication, and cleanup previews honor the app's system-cache exclusion.
+CLI callers retain their existing behavior. The native interface also fixes
+large-file decoding, cached settings, uncertain purge recommendations, and
+process cancellation.
+
 These changes are distributed under GNU GPL v3 only. Mac Tidy is independent
 from and not endorsed by the Mole project. See `TRADEMARK.md`.

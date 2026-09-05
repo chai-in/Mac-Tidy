@@ -322,6 +322,19 @@ struct DiskAnalysis: Decodable {
         let isDir: Bool
 
         var id: String { path }
+
+        private enum CodingKeys: String, CodingKey {
+            case name, path, size, isDir
+        }
+
+        init(from decoder: Decoder) throws {
+            let values = try decoder.container(keyedBy: CodingKeys.self)
+            name = try values.decode(String.self, forKey: .name)
+            path = try values.decode(String.self, forKey: .path)
+            size = try values.decode(Int64.self, forKey: .size)
+            // Mole's large_files rows are always files and omit is_dir.
+            isDir = try values.decodeIfPresent(Bool.self, forKey: .isDir) ?? false
+        }
     }
 
     let path: String
