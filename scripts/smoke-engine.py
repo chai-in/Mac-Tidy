@@ -5,6 +5,7 @@ import argparse
 import json
 import os
 from pathlib import Path
+import pwd
 import signal
 import subprocess
 import tempfile
@@ -19,8 +20,11 @@ def main():
 
     with tempfile.TemporaryDirectory(prefix="mac-tidy-smoke-") as temporary:
         root = Path(temporary).resolve()
+        username = pwd.getpwuid(os.getuid()).pw_name
         environment = {
             "HOME": str(root),
+            "USER": username,
+            "LOGNAME": username,
             "XDG_CONFIG_HOME": str(root / ".config"),
             "XDG_CACHE_HOME": str(root / ".cache"),
             "PATH": "/usr/bin:/bin:/usr/sbin:/sbin",
@@ -75,8 +79,8 @@ def main():
         print("PASS: protection settings save and reload in a disposable home", flush=True)
 
         preview = run("optimize", "--dry-run")
-        assert "Dry Run Complete, No Changes Made" in preview
-        assert "Would apply" in preview
+        assert "Dry Run Complete, No Changes Made" in preview, preview
+        assert "Would apply" in preview, preview
         print("PASS: native optimization preview completes with a summary", flush=True)
 
         project = root / "Code" / "Example Project"
