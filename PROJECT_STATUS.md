@@ -44,12 +44,13 @@ notarization credentials. Source publication does not require those credentials.
 
 ## Verification on 2026-09-05
 
-- The native app passed 37 Swift tests, including large-file decoding,
-  confirmation isolation, uncertain purge selection, and process-tree cancellation.
+- The native app passed 39 Swift tests, including large-file decoding,
+  confirmation isolation, uncertain purge selection, process-tree cancellation,
+  and complete pagination with bounded rows.
 - Version 1.0.2 bounds and batches activity output, avoids JSON text round trips,
   isolates activity rendering, and reuses the engine's watch collector only
   while automatic status refresh is active. Scans use direct bundled helpers,
-  result lists sort once per render, and analysis rows are loaded lazily.
+  result lists sort once per render, and result pages render at most 50 rows.
 - Version 1.0.1 excludes protected recent-document folders before traversing
   shared file lists, reports access denials as unavailable, and preserves real
   scan failures. Error alerts select the diagnostic rather than the command heading.
@@ -70,7 +71,8 @@ notarization credentials. Source publication does not require those credentials.
   analyzer rebuilt with network access disabled and an empty module cache.
 - Native window checks confirmed first-open guidance, the dashboard, existing
   cleanup protections after reopening the editor, folder analysis, and a
-  128 MiB large-file result.
+  128 MiB large-file result. Live status used one collector, stopped on leaving
+  Status or hiding the app, and resumed after bringing the app back.
 - GitHub CI checks the native app, Go packages, native confirmation and prompt
   routing, and the disposable bridge smoke flows on each push.
 

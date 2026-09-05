@@ -11,8 +11,8 @@ not a universal reduction in the app's total resource use.
 | Six status updates at a nominal five-second interval, CPU time | 7.886 s | 2.025 s | 74.3% lower |
 | 1,000-file analysis, median of four runs | 0.320 s | 0.081 s | 74.7% lower |
 | Installed application, logical file bytes | 14.37 MB | 12.72 MB | 11.4% smaller |
-| DMG download | 6.31 MB | 5.97 MB | 5.5% smaller |
-| ZIP download | 5.65 MB | 5.33 MB | 5.6% smaller |
+| DMG download | 6.31 MB | 5.97 MB | about 5% smaller |
+| ZIP download | 5.65 MB | 5.33 MB | about 6% smaller |
 
 The activity workload generates 16 MiB from a child process and measures the
 native runner without a visible SwiftUI window. The status comparison uses
@@ -34,7 +34,10 @@ the directly bundled analyzer.
   Slow-changing fields follow the existing 30-second enrichment cadence.
 - Partial collection errors travel with the corresponding status record and
   are not presented as complete healthy snapshots.
-- Result lists sort once per render; analysis creates rows lazily.
+- Result lists sort once per render and display at most 50 rows per page.
+  Every result remains reachable, selection survives page changes, and bulk
+  selection includes all matching results. Bounded pages avoid the SwiftUI
+  accessibility scrolling crash observed with a 5,000-file lazy list on macOS 27.
 - Release builds use size optimization and strip local symbols. Icons render
   at exact pixel dimensions. ZIP compression is lossless at level nine.
 
@@ -55,4 +58,5 @@ Use disposable data and the same sampling count and machine conditions.
 
 Regression checks cover buffer bounds, preserved diagnostics, Unicode
 framing, JSON overflow refusal, live progress, monitor cancellation,
-foreground-action coordination, and incomplete status records.
+foreground-action coordination, incomplete status records, complete pagination,
+and page bounds after filtering.

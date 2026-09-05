@@ -56,7 +56,7 @@ struct UninstallView: View {
                     }
                     .disabled(runner.isRunning)
                     if !apps.isEmpty {
-                        Button("Select Visible") {
+                        Button(search.isEmpty ? "Select All" : "Select Matching") {
                             selection.formUnion(apps.map(\.id))
                         }
                         Button("Clear") { selection.removeAll() }
@@ -72,17 +72,10 @@ struct UninstallView: View {
                     )
                     .frame(height: 250)
                 } else {
-                    ScrollView {
-                        LazyVStack(spacing: 0) {
-                            ForEach(apps) { app in
-                                applicationRow(app)
-                                if app.id != apps.last?.id {
-                                    Divider().padding(.leading, 38)
-                                }
-                            }
-                        }
+                    PagedResults(items: apps) { app in
+                        applicationRow(app)
                     }
-                    .frame(height: 330)
+                    .id(search)
                     .background(.primary.opacity(0.025), in: RoundedRectangle(cornerRadius: 10))
                 }
             }
@@ -239,7 +232,7 @@ struct AnalyzeView: View {
                         Text("\(selection.count) selected")
                             .foregroundStyle(.secondary)
                         Spacer()
-                        Button("Select Listed") {
+                        Button("Select All Results") {
                             selection.formUnion(entries.map(\.path))
                         }
                         .disabled(entries.isEmpty)
@@ -251,23 +244,19 @@ struct AnalyzeView: View {
                         ContentUnavailableView("No Contents", systemImage: "folder", description: Text("Mole found no sized entries."))
                             .frame(height: 180)
                     } else {
-                        LazyVStack(spacing: 0) {
-                            ForEach(entries) { entry in
-                                analysisRow(entry)
-                                if entry.id != entries.last?.id { Divider() }
-                            }
+                        PagedResults(items: entries) { entry in
+                            analysisRow(entry)
                         }
+                        .id(analysis.path)
                     }
                 }
 
                 if !largeFiles.isEmpty {
                     MoleCard(title: "Large files", subtitle: "Files at least 100 MB found in this analysis") {
-                        LazyVStack(spacing: 0) {
-                            ForEach(largeFiles) { entry in
-                                analysisRow(entry)
-                                if entry.id != largeFiles.last?.id { Divider() }
-                            }
+                        PagedResults(items: largeFiles) { entry in
+                            analysisRow(entry)
                         }
+                        .id(analysis.path)
                     }
                 }
 
@@ -706,15 +695,10 @@ struct PurgeView: View {
                     ContentUnavailableView("No Artifact Plan", systemImage: "shippingbox", description: Text("Scan configured project paths to find rebuildable artifacts."))
                         .frame(height: 230)
                 } else {
-                    ScrollView {
-                        LazyVStack(spacing: 0) {
-                            ForEach(candidates) { candidate in
-                                purgeRow(candidate)
-                                if candidate.id != candidates.last?.id { Divider().padding(.leading, 34) }
-                            }
-                        }
+                    PagedResults(items: candidates) { candidate in
+                        purgeRow(candidate)
                     }
-                    .frame(height: 350)
+                    .id(search)
                 }
             }
 
@@ -885,15 +869,10 @@ struct InstallersView: View {
                     ContentUnavailableView("No Installer Inventory", systemImage: "externaldrive", description: Text("Scan to review installer files before removal."))
                         .frame(height: 230)
                 } else {
-                    ScrollView {
-                        LazyVStack(spacing: 0) {
-                            ForEach(candidates) { candidate in
-                                installerRow(candidate)
-                                if candidate.id != candidates.last?.id { Divider().padding(.leading, 34) }
-                            }
-                        }
+                    PagedResults(items: candidates) { candidate in
+                        installerRow(candidate)
                     }
-                    .frame(height: 350)
+                    .id(search)
                 }
             }
 
