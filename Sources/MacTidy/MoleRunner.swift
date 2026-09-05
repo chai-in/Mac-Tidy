@@ -520,14 +520,25 @@ final class MoleRunner: ObservableObject {
     }
 
     nonisolated private static func failureMessage(for result: CommandResult) -> String {
-        let detail = (result.standardError.isEmpty ? result.standardOutput : result.standardError)
+        let errorLines = result.standardError
             .split(separator: "\n")
-            .first
-            .map(String.init)
-        if let detail, !detail.isEmpty {
-            return "\(result.invocation.label) failed: \(detail)"
+            .map { String($0).trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+        let outputLines = result.standardOutput
+            .split(separator: "\n")
+            .map { String($0).trimmingCharacters(in: .whitespaces) }
+        // Engine task diagnostics can be written to stdout after the heading.
+        // Keep the full output in Activity, and put the actual cause in the alert.
+        let diagnostic = (errorLines + outputLines).first { line in
+            let value = line.lowercased()
+            return value.contains("failed to ") || value.contains("could not ")
+                || value.contains("error:") || value.contains("permission denied")
+                || value.contains("operation not permitted")
         }
-        return "\(result.invocation.label) failed with exit code \(result.exitCode)."
+        if let detail = diagnostic ?? errorLines.first {
+            return "\(result.invocation.label) failed: \(detail.prefix(500))"
+        }
+        return "\(result.invocation.label) failed with exit code \(result.exitCode). See Activity for details."
     }
 
     nonisolated private static func cleanOutput(_ value: String) -> String {

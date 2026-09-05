@@ -3,7 +3,7 @@
 ## Product
 
 - Native macOS maintenance GUI with a bundled engine.
-- Application version: `1.0.0`.
+- Application version: `1.0.1`.
 - Bundle identifier: `com.chai.mactidy`.
 - Deployment target: macOS 14 or later.
 - Builds support Apple silicon only (`arm64`).
@@ -44,8 +44,13 @@ notarization credentials. Source publication does not require those credentials.
 
 ## Verification on 2026-09-05
 
-- The native app passed 22 Swift tests, including large-file decoding,
+- The native app passed 24 Swift tests, including large-file decoding,
   confirmation isolation, uncertain purge selection, and process-tree cancellation.
+- Version 1.0.1 excludes protected recent-document folders before traversing
+  shared file lists, reports access denials as unavailable, and preserves real
+  scan failures. Error alerts select the diagnostic rather than the command heading.
+  All 139 focused optimization tests passed, including regressions observed
+  failing before the fix.
 - All three Go packages passed their tests.
 - The full 1,750-case upstream shell run completed with six failures under
   load. Each failed case passed focused reruns; the affected failures concerned

@@ -36,7 +36,9 @@ jobs:
       - name: Test native confirmation and administrator prompt routing
         run: |
           command -v bats || brew install bats-core
-          MOLE_TEST_NO_AUTH=1 bats Vendor/Mole/tests/gui_bridge.bats Vendor/Mole/tests/manage_sudo.bats
+          MOLE_TEST_NO_AUTH=1 bats Vendor/Mole/tests/gui_bridge.bats Vendor/Mole/tests/manage_sudo.bats \
+            Vendor/Mole/tests/optimize_probe_outcomes.bats Vendor/Mole/tests/optimize_removal_outcomes.bats \
+            Vendor/Mole/tests/optimize_summary.bats
 
       - name: Exercise native bridge with disposable data
         working-directory: Vendor/Mole

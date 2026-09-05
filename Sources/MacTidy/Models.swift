@@ -1,7 +1,7 @@
 import Foundation
 
 enum AppMetadata {
-    static let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0.0"
+    static let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0.1"
     static let bundledMoleVersion = Bundle.main.object(forInfoDictionaryKey: "MoleEngineVersion") as? String ?? "1.53.0"
     static let bundledMoleCommit = Bundle.main.object(forInfoDictionaryKey: "MoleEngineCommit") as? String
         ?? "1b9023b5f151c2d963bbcb9cb658f4824137b8aa"

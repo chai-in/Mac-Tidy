@@ -22,5 +22,11 @@ CLI callers retain their existing behavior. The native interface also fixes
 large-file decoding, cached settings, uncertain purge recommendations, and
 process cancellation.
 
+On 2026-09-05, Mac Tidy 1.0.1 corrected the shared-file-list scan to prune
+excluded recent-document folders before traversal. Access-denied scans now
+report the task as unavailable and discard partial results; genuine errors
+and cancellation still propagate. Native alerts now display the diagnostic
+rather than a command heading. Regression and full-preview checks cover this fix.
+
 These changes are distributed under GNU GPL v3 only. Mac Tidy is independent
 from and not endorsed by the Mole project. See `TRADEMARK.md`.

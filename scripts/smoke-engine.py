@@ -74,6 +74,11 @@ def main():
             assert pattern in read_json(mode, "--gui-whitelist-list")["custom_patterns"]
         print("PASS: protection settings save and reload in a disposable home", flush=True)
 
+        preview = run("optimize", "--dry-run")
+        assert "Dry Run Complete, No Changes Made" in preview
+        assert "Would apply" in preview
+        print("PASS: native optimization preview completes with a summary", flush=True)
+
         project = root / "Code" / "Example Project"
         artifacts = project / "node_modules"
         artifacts.mkdir(parents=True)

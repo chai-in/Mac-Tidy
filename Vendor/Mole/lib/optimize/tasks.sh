@@ -1389,24 +1389,38 @@ opt_shared_file_list_repair() {
     fi
 
     local repaired=0
-    local scan_failed=0
     local remove_failed=0
     local scan_file=""
-    if ! scan_file=$(mktemp_file "optimize-shared-file-lists"); then
+    local scan_errors=""
+    if ! scan_file=$(mktemp_file "optimize-shared-file-lists") ||
+        ! scan_errors=$(mktemp_file "optimize-shared-file-list-errors"); then
         echo -e "  ${YELLOW}${ICON_WARNING}${NC} Failed to prepare shared file list scan"
         optimize_task_result "$MOLE_OPTIMIZE_OUTCOME_FAILED"
         return 0
     fi
     local scan_rc=0
-    run_with_timeout "$MOLE_TIMEOUT_MEDIUM_PROBE_SEC" find "$sfl_dir" \
+    # Recent-document lists are user data. Prune them before descent rather
+    # than filtering their results after find has entered protected folders.
+    LC_ALL=C run_with_timeout "$MOLE_TIMEOUT_MEDIUM_PROBE_SEC" find "$sfl_dir" \
+        -path "*ApplicationRecentDocuments*" -prune -o \
         \( -name "*.sfl2" -o -name "*.sfl3" \) -type f \
-        ! -path "*ApplicationRecentDocuments*" -print0 \
-        > "$scan_file" 2> /dev/null || scan_rc=$?
+        -print0 > "$scan_file" 2> "$scan_errors" || scan_rc=$?
     if [[ $scan_rc -ne 0 ]]; then
         : > "$scan_file" || true
         [[ $scan_rc -eq 124 || $scan_rc -ge 128 ]] && return "$scan_rc"
-        echo -e "  ${YELLOW}${ICON_WARNING}${NC} Failed to scan shared file lists"
-        scan_failed=1
+        if [[ -s "$scan_errors" ]] &&
+            ! grep -Evq '^find: .*: (Permission denied|Operation not permitted)$' "$scan_errors"; then
+            echo -e "  ${YELLOW}${ICON_WARNING}${NC} Shared file lists unavailable (access denied). Check folder permissions or Full Disk Access in System Settings."
+            optimize_task_result "$MOLE_OPTIMIZE_OUTCOME_UNAVAILABLE"
+        else
+            local scan_detail=""
+            scan_detail=$(sed -n '1p' "$scan_errors")
+            printf '  %s%s%s Failed to scan shared file lists%s\n' \
+                "$YELLOW" "$ICON_WARNING" "$NC" "${scan_detail:+: $scan_detail}"
+            optimize_task_result "$MOLE_OPTIMIZE_OUTCOME_FAILED"
+        fi
+        # Never inspect or mutate entries from an incomplete scan.
+        return 0
     fi
     while IFS= read -r -d '' sfl_file; do
         [[ -f "$sfl_file" ]] || continue
@@ -1429,13 +1443,13 @@ opt_shared_file_list_repair() {
 
     if [[ $repaired -gt 0 ]]; then
         opt_msg "Repaired $repaired corrupted shared file list(s)"
-    elif [[ $scan_failed -eq 0 && $remove_failed -eq 0 ]]; then
+    elif [[ $remove_failed -eq 0 ]]; then
         opt_msg "Shared file lists all healthy"
     fi
     if [[ $remove_failed -gt 0 ]]; then
         echo -e "  ${YELLOW}${ICON_WARNING}${NC} Failed to repair $remove_failed corrupted shared file list(s)"
     fi
-    optimize_task_result_from_counts "$repaired" "$((scan_failed + remove_failed))"
+    optimize_task_result_from_counts "$repaired" "$remove_failed"
 }
 
 # Resolve the live Notification Center SQLite database.

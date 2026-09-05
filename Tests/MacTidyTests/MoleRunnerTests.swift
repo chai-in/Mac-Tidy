@@ -67,6 +67,29 @@ final class MoleRunnerTests: XCTestCase {
     }
 
     @MainActor
+    func testFailureAlertUsesTheDiagnosticInsteadOfTheCommandHeading() async {
+        let runner = MoleRunner(executablePath: "/bin/bash")
+        let finished = expectation(description: "Preview failure captured")
+        runner.runCapture(MoleInvocation(label: "Preview optimization", arguments: [
+            "-c", "printf 'Optimize\\n\\nDry run mode\\n  ◎ Failed to scan shared file lists\\nSummary: 1 failed\\n'; exit 1"
+        ], risk: .preview)) { _ in finished.fulfill() }
+        await fulfillment(of: [finished], timeout: 5)
+        XCTAssertTrue(runner.presentedError?.contains("Failed to scan shared file lists") == true)
+        XCTAssertFalse(runner.presentedError?.contains("failed: Optimize") == true)
+    }
+
+    @MainActor
+    func testFailureWithoutDiagnosticReportsExitCodeAndActivity() async {
+        let runner = MoleRunner(executablePath: "/bin/bash")
+        let finished = expectation(description: "Unexplained failure captured")
+        runner.runCapture(MoleInvocation(label: "Fixture", arguments: [
+            "-c", "printf 'Optimize\\n'; exit 9"
+        ], risk: .preview)) { _ in finished.fulfill() }
+        await fulfillment(of: [finished], timeout: 5)
+        XCTAssertEqual(runner.presentedError, "Fixture failed with exit code 9. See Activity for details.")
+    }
+
+    @MainActor
     func testCancellationStopsTermIgnoringChildAndPreservesOutput() async throws {
         try await checkCancellation(script: "trap '' TERM; sleep 30 & child=$!; printf '%s\\n' \"$child\"; wait \"$child\"")
     }

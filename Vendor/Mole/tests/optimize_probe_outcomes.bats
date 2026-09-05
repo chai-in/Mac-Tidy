@@ -215,6 +215,91 @@ EOF
 	[[ "$output" != *"Failed to repair"* ]] || return 1
 }
 
+@test "shared file list repair never traverses excluded unreadable recent documents" {
+	[[ "$(id -u)" -ne 0 ]] || skip "root can traverse mode-000 directories"
+	run env HOME="$TEST_HOME/shared-prune" PROJECT_ROOT="$PROJECT_ROOT" /bin/bash --noprofile --norc <<'EOF'
+set -euo pipefail
+source "$PROJECT_ROOT/lib/core/common.sh"
+source "$PROJECT_ROOT/lib/optimize/tasks.sh"
+sfl_dir="$HOME/Library/Application Support/com.apple.sharedfilelist"
+excluded="$sfl_dir/com.apple.LSSharedFileList.ApplicationRecentDocuments"
+mkdir -p "$excluded"
+/usr/bin/plutil -create binary1 "$sfl_dir/favorites.sfl3"
+touch "$excluded/private.sfl3"
+chmod 000 "$excluded"
+trap 'chmod 700 "$excluded"' EXIT
+plutil() { printf '%s\n' "$*" >> "$HOME/checked-lists"; /usr/bin/plutil "$@"; }
+safe_remove() { echo UNEXPECTED_REMOVAL; return 1; }
+
+for preview in 0 1; do
+    MOLE_DRY_RUN=$preview
+    optimize_outcomes_reset
+    execute_optimization shared_file_list_repair
+    [[ "$(optimize_outcome_count unchanged)" == 1 ]] || exit 1
+    [[ "$(optimize_outcome_count failed)" == 0 ]] || exit 1
+done
+grep -qF 'favorites.sfl3' "$HOME/checked-lists" || exit 1
+if grep -qF 'private.sfl3' "$HOME/checked-lists"; then exit 1; fi
+EOF
+	[[ "$status" -eq 0 ]] || { echo "$output"; return 1; }
+	[[ "$output" == *"Shared file lists all healthy"* ]] || return 1
+	[[ "$output" != *"UNEXPECTED_REMOVAL"* ]] || return 1
+}
+
+@test "shared file list access denial discards partial results and reports unavailable" {
+	run env HOME="$TEST_HOME/shared-denied" PROJECT_ROOT="$PROJECT_ROOT" /bin/bash --noprofile --norc <<'EOF'
+set -euo pipefail
+source "$PROJECT_ROOT/lib/core/common.sh"
+source "$PROJECT_ROOT/lib/optimize/tasks.sh"
+sfl_dir="$HOME/Library/Application Support/com.apple.sharedfilelist"
+mkdir -p "$sfl_dir" "$HOME/bin"
+touch "$sfl_dir/partial.sfl3"
+cat > "$HOME/bin/find" <<'STUB'
+#!/bin/bash
+printf '%s\0' "$1/partial.sfl3"
+printf 'find: %s: Operation not permitted\n' "$1" >&2
+exit 1
+STUB
+chmod +x "$HOME/bin/find"
+PATH="$HOME/bin:$PATH"
+plutil() { echo UNEXPECTED_INSPECTION; return 1; }
+safe_remove() { echo UNEXPECTED_REMOVAL; return 0; }
+for preview in 0 1; do
+    MOLE_DRY_RUN=$preview
+    optimize_outcomes_reset
+    execute_optimization shared_file_list_repair
+    [[ "$(optimize_outcome_count unavailable)" == 1 ]] || exit 1
+    [[ "$(optimize_outcome_count failed)" == 0 ]] || exit 1
+done
+[[ -f "$sfl_dir/partial.sfl3" ]] || exit 1
+EOF
+	[[ "$status" -eq 0 ]] || { echo "$output"; return 1; }
+	[[ "$output" == *"Full Disk Access"* ]] || return 1
+	[[ "$output" != *"all healthy"* ]] || return 1
+	[[ "$output" != *"UNEXPECTED_"* ]] || return 1
+}
+
+@test "shared file list mixed I/O errors remain failures" {
+	run env HOME="$TEST_HOME/shared-io-error" PROJECT_ROOT="$PROJECT_ROOT" /bin/bash --noprofile --norc <<'EOF'
+set -euo pipefail
+source "$PROJECT_ROOT/lib/core/common.sh"
+source "$PROJECT_ROOT/lib/optimize/tasks.sh"
+mkdir -p "$HOME/Library/Application Support/com.apple.sharedfilelist" "$HOME/bin"
+cat > "$HOME/bin/find" <<'STUB'
+#!/bin/bash
+printf 'find: %s: Permission denied\nfind: %s: Input/output error\n' "$1/blocked" "$1/broken" >&2
+exit 1
+STUB
+chmod +x "$HOME/bin/find"
+PATH="$HOME/bin:$PATH"
+execute_optimization shared_file_list_repair
+[[ "$(optimize_outcome_count failed)" == 1 ]] || exit 1
+[[ "$(optimize_outcome_count unavailable)" == 0 ]] || exit 1
+EOF
+	[[ "$status" -eq 0 ]] || { echo "$output"; return 1; }
+	[[ "$output" == *"Failed to scan shared file lists"* ]] || return 1
+}
+
 @test "optimize external probes use bounded execution" {
 	run env PROJECT_ROOT="$PROJECT_ROOT" /bin/bash --noprofile --norc <<'EOF'
 set -euo pipefail
