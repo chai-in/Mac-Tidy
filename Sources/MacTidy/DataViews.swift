@@ -1,4 +1,5 @@
 import AppKit
+import Combine
 import Foundation
 import SwiftUI
 
@@ -376,6 +377,14 @@ struct StatusView: View {
     @EnvironmentObject private var runner: MoleRunner
     @Environment(\.scenePhase) private var scenePhase
     @State private var autoRefresh = false
+    @State private var appIsActive = false
+    @State private var sessionIsActive = true
+    @State private var screensAreAwake = true
+
+    private var shouldRefresh: Bool {
+        autoRefresh && scenePhase == .active && appIsActive
+            && sessionIsActive && screensAreAwake && !runner.isRunning
+    }
 
     var body: some View {
         FeaturePage(
@@ -415,8 +424,28 @@ struct StatusView: View {
                 runner.refreshStatus()
             }
         }
-        .task(id: autoRefresh && scenePhase == .active && !runner.isRunning) {
-            guard autoRefresh, scenePhase == .active, !runner.isRunning else { return }
+        .onAppear { appIsActive = NSApplication.shared.isActive }
+        .onDisappear { runner.stopStatusMonitoring() }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            appIsActive = true
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didResignActiveNotification)) { _ in
+            appIsActive = false
+        }
+        .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.sessionDidBecomeActiveNotification)) { _ in
+            sessionIsActive = true
+        }
+        .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.sessionDidResignActiveNotification)) { _ in
+            sessionIsActive = false
+        }
+        .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.screensDidWakeNotification)) { _ in
+            screensAreAwake = true
+        }
+        .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.screensDidSleepNotification)) { _ in
+            screensAreAwake = false
+        }
+        .task(id: shouldRefresh) {
+            guard shouldRefresh else { return }
             await runner.monitorStatus()
         }
     }
