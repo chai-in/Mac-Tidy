@@ -31,7 +31,7 @@ struct ContentView: View {
 
                 if runner.showsActivity {
                     Divider()
-                    ActivityPanel()
+                    ActivityPanel(activityState: runner.activityState)
                         .frame(minHeight: 150, idealHeight: 210, maxHeight: 280)
                 }
             }
@@ -277,6 +277,7 @@ struct MetricCard: View {
 
 struct ActivityPanel: View {
     @EnvironmentObject private var runner: MoleRunner
+    @ObservedObject var activityState: MoleActivity
 
     var body: some View {
         VStack(spacing: 0) {
@@ -287,9 +288,9 @@ struct ActivityPanel: View {
                     Text(runner.activeLabel ?? "Working")
                         .font(.caption.weight(.semibold))
                 } else {
-                    Image(systemName: runner.lastExitCode == 0 ? "checkmark.circle.fill" : "list.bullet.rectangle")
-                        .foregroundStyle(runner.lastExitCode == 0 ? .green : .secondary)
-                    Text(runner.lastExitCode.map { $0 == 0 ? "Finished" : "Stopped with code \($0)" } ?? "Activity")
+                    Image(systemName: runner.lastOutputError != nil ? "exclamationmark.triangle" : (runner.lastExitCode == 0 ? "checkmark.circle.fill" : "list.bullet.rectangle"))
+                        .foregroundStyle(runner.lastOutputError != nil ? .orange : (runner.lastExitCode == 0 ? .green : .secondary))
+                    Text(runner.lastOutputError != nil ? "Result unavailable" : (runner.lastExitCode.map { $0 == 0 ? "Finished" : "Stopped with code \($0)" } ?? "Activity"))
                         .font(.caption.weight(.semibold))
                 }
                 Spacer()
@@ -304,7 +305,7 @@ struct ActivityPanel: View {
                     Image(systemName: "doc.on.doc")
                 }
                 .buttonStyle(.plain)
-                .disabled(runner.activity.isEmpty)
+                .disabled(activityState.text.isEmpty)
                 .help("Copy activity")
                 Button {
                     runner.clearActivity()
@@ -320,7 +321,7 @@ struct ActivityPanel: View {
             .background(.bar)
 
             ScrollView([.vertical, .horizontal]) {
-                Text(runner.activity.isEmpty ? "No activity yet." : runner.activity)
+                Text(activityState.text.isEmpty ? "No activity yet." : activityState.text)
                     .font(.system(.caption, design: .monospaced))
                     .textSelection(.enabled)
                     .frame(maxWidth: .infinity, alignment: .topLeading)

@@ -2,18 +2,22 @@ import AppKit
 import Foundation
 
 guard CommandLine.arguments.count == 3,
-      let size = Double(CommandLine.arguments[2]) else {
+      let size = Double(CommandLine.arguments[2]),
+      size.isFinite, size >= 1, size <= 4_096, size.rounded() == size else {
     fputs("usage: generate-icon.swift OUTPUT SIZE\n", stderr)
     exit(2)
 }
 
 let output = CommandLine.arguments[1]
-let canvas = NSSize(width: size, height: size)
-let image = NSImage(size: canvas)
-
-image.lockFocus()
-
-guard let context = NSGraphicsContext.current?.cgContext else { exit(3) }
+// Render exact pixels without a Retina-sized intermediate or TIFF conversion.
+guard let bitmap = NSBitmapImageRep(
+    bitmapDataPlanes: nil, pixelsWide: Int(size), pixelsHigh: Int(size),
+    bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+    colorSpaceName: .deviceRGB, bytesPerRow: Int(size) * 4, bitsPerPixel: 32
+), let graphics = NSGraphicsContext(bitmapImageRep: bitmap) else { exit(3) }
+NSGraphicsContext.saveGraphicsState()
+NSGraphicsContext.current = graphics
+let context = graphics.cgContext
 context.setAllowsAntialiasing(true)
 context.setShouldAntialias(true)
 
@@ -90,11 +94,9 @@ sparkle(x: 0.70, y: 0.75, radius: 0.085)
 sparkle(x: 0.48, y: 0.28, radius: 0.055)
 
 NSGraphicsContext.restoreGraphicsState()
-image.unlockFocus()
+NSGraphicsContext.restoreGraphicsState()
 
-guard let data = image.tiffRepresentation,
-      let bitmap = NSBitmapImageRep(data: data),
-      let png = bitmap.representation(using: .png, properties: [:]) else {
+guard let png = bitmap.representation(using: .png, properties: [:]) else {
     exit(4)
 }
 try png.write(to: URL(fileURLWithPath: output), options: .atomic)

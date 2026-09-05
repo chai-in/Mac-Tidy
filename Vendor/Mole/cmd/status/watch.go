@@ -71,11 +71,21 @@ func runWatchStdout(interval time.Duration) {
 				continue
 			}
 		}
-		if err := enc.Encode(snap); err != nil {
+		if err := encodeWatchSnapshot(enc, snap, err); err != nil {
 			return // stdout closed; parent died, nothing left to feed.
 		}
 		if wasReady {
 			time.Sleep(interval)
 		}
 	}
+}
+
+// Keep partial-collection errors attached to their record, so non-TUI clients
+// never mistake a zero-valued metric for a complete successful collection.
+func encodeWatchSnapshot(enc *json.Encoder, snap MetricsSnapshot, collectionErr error) error {
+	snap.CollectionError = ""
+	if collectionErr != nil {
+		snap.CollectionError = collectionErr.Error()
+	}
+	return enc.Encode(snap)
 }

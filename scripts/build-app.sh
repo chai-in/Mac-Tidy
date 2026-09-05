@@ -46,9 +46,9 @@ trap cleanup_package_temp EXIT
 swift test --scratch-path "$SWIFT_SCRATCH_BASE-tests" --package-path "$PROJECT_DIR"
 
 mkdir -p "$ENGINE_BUILD" "$GO_CACHE"
-swift build -c release --arch arm64 \
+swift build -c release --arch arm64 -Xswiftc -Osize \
     --scratch-path "$SWIFT_SCRATCH_BASE-arm64" --package-path "$PROJECT_DIR"
-swift_bin_dir="$(swift build -c release --arch arm64 \
+swift_bin_dir="$(swift build -c release --arch arm64 -Xswiftc -Osize \
     --scratch-path "$SWIFT_SCRATCH_BASE-arm64" --show-bin-path --package-path "$PROJECT_DIR")"
 (
     cd "$VENDOR_DIR"
@@ -66,6 +66,7 @@ swift_bin_dir="$(swift build -c release --arch arm64 \
 
 mkdir -p "$CONTENTS/MacOS" "$CONTENTS/Resources" "$ENGINE_PATH" "$ICON_WORK"
 ditto "$swift_bin_dir/$EXECUTABLE_NAME" "$CONTENTS/MacOS/$EXECUTABLE_NAME"
+/usr/bin/strip -x "$CONTENTS/MacOS/$EXECUTABLE_NAME"
 ditto "$INFO_PLIST" "$CONTENTS/Info.plist"
 ditto "$PROJECT_DIR/LICENSE" "$CONTENTS/Resources/LICENSE"
 ditto "$PROJECT_DIR/NOTICE" "$CONTENTS/Resources/NOTICE"
@@ -149,18 +150,18 @@ else
         /usr/bin/tar -C "$PROJECT_DIR" --exclude='.git' --exclude='tests/tmp-*' \
             --exclude='bin/analyze-go' --exclude='bin/status-go' -cf - "$directory" | /usr/bin/tar -C "$SOURCE_PATH" -xf -
     done
-    for file in .gitattributes .gitignore Package.swift README.md LICENSE NOTICE CONTRIBUTING.md SECURITY.md PROJECT_STATUS.md; do
+    for file in .gitattributes .gitignore Package.swift README.md LICENSE NOTICE CONTRIBUTING.md SECURITY.md PROJECT_STATUS.md PERFORMANCE.md; do
         ditto "$PROJECT_DIR/$file" "$SOURCE_PATH/$file"
     done
 fi
 ditto "$PACKAGE_TEMP/go-vendor" "$SOURCE_PATH/Vendor/Mole/vendor"
 
-ditto -c -k --norsrc --keepParent "$APP_PATH" "$APP_ZIP"
+ditto -c -k --zlibCompressionLevel 9 --norsrc --keepParent "$APP_PATH" "$APP_ZIP"
 mkdir -p "$PACKAGE_TEMP/dmg"
 ditto --norsrc "$APP_PATH" "$PACKAGE_TEMP/dmg/$APP_NAME.app"
 ln -s /Applications "$PACKAGE_TEMP/dmg/Applications"
 hdiutil create -quiet -volname "$APP_NAME $VERSION" -srcfolder "$PACKAGE_TEMP/dmg" -format UDZO "$APP_DMG"
-ditto -c -k --norsrc --keepParent "$SOURCE_PATH" "$SOURCE_ZIP"
+ditto -c -k --zlibCompressionLevel 9 --norsrc --keepParent "$SOURCE_PATH" "$SOURCE_ZIP"
 unzip -tq "$APP_ZIP" >/dev/null
 unzip -tq "$SOURCE_ZIP" >/dev/null
 hdiutil verify "$APP_DMG" >/dev/null

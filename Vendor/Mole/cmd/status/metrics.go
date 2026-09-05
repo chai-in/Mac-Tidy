@@ -60,15 +60,16 @@ func (rb *RingBuffer) Slice() []float64 {
 }
 
 type MetricsSnapshot struct {
-	CollectedAt    time.Time    `json:"collected_at"`
-	Host           string       `json:"host"`
-	Platform       string       `json:"platform"`
-	Uptime         string       `json:"uptime"`
-	UptimeSeconds  uint64       `json:"uptime_seconds"`
-	Procs          uint64       `json:"procs"`
-	Hardware       HardwareInfo `json:"hardware"`
-	HealthScore    int          `json:"health_score"`     // 0-100 system health score
-	HealthScoreMsg string       `json:"health_score_msg"` // Brief explanation
+	CollectionError string       `json:"collection_error,omitempty"`
+	CollectedAt     time.Time    `json:"collected_at"`
+	Host            string       `json:"host"`
+	Platform        string       `json:"platform"`
+	Uptime          string       `json:"uptime"`
+	UptimeSeconds   uint64       `json:"uptime_seconds"`
+	Procs           uint64       `json:"procs"`
+	Hardware        HardwareInfo `json:"hardware"`
+	HealthScore     int          `json:"health_score"`     // 0-100 system health score
+	HealthScoreMsg  string       `json:"health_score_msg"` // Brief explanation
 
 	CPU                   CPUStatus          `json:"cpu"`
 	GPU                   []GPUStatus        `json:"gpu"`

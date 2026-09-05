@@ -28,5 +28,11 @@ report the task as unavailable and discard partial results; genuine errors
 and cancellation still propagate. Native alerts now display the diagnostic
 rather than a command heading. Regression and full-preview checks cover this fix.
 
+On 2026-09-05, Mac Tidy 1.0.2 added per-record collection errors to the
+existing status watch protocol so clients can reject incomplete metrics.
+The native app reuses this warm collector, runs bundled status/analyze
+helpers directly, bounds output memory, and preserves confirmation and
+path-validation behavior.
+
 These changes are distributed under GNU GPL v3 only. Mac Tidy is independent
 from and not endorsed by the Mole project. See `TRADEMARK.md`.

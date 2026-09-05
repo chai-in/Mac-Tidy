@@ -1,5 +1,4 @@
 import AppKit
-import Combine
 import Foundation
 import SwiftUI
 
@@ -26,7 +25,8 @@ struct UninstallView: View {
     }
 
     var body: some View {
-        FeaturePage(
+        let apps = filteredApps
+        return FeaturePage(
             title: "Uninstall",
             subtitle: "Remove applications plus related launch agents, preferences, caches, and leftovers.",
             icon: MoleFeature.uninstall.icon
@@ -54,9 +54,9 @@ struct UninstallView: View {
                         Label(runner.installedApps.isEmpty ? "Scan Apps" : "Rescan", systemImage: "arrow.clockwise")
                     }
                     .disabled(runner.isRunning)
-                    if !filteredApps.isEmpty {
+                    if !apps.isEmpty {
                         Button("Select Visible") {
-                            selection.formUnion(filteredApps.map(\.id))
+                            selection.formUnion(apps.map(\.id))
                         }
                         Button("Clear") { selection.removeAll() }
                             .disabled(selection.isEmpty)
@@ -73,9 +73,9 @@ struct UninstallView: View {
                 } else {
                     ScrollView {
                         LazyVStack(spacing: 0) {
-                            ForEach(filteredApps) { app in
+                            ForEach(apps) { app in
                                 applicationRow(app)
-                                if app.id != filteredApps.last?.id {
+                                if app.id != apps.last?.id {
                                     Divider().padding(.leading, 38)
                                 }
                             }
@@ -199,7 +199,9 @@ struct AnalyzeView: View {
     }
 
     var body: some View {
-        FeaturePage(
+        let entries = sortedEntries
+        let largeFiles = sortedLargeFiles
+        return FeaturePage(
             title: "Analyze",
             subtitle: "Explore folder sizes, reveal files, select items, and move reviewed items to Trash.",
             icon: MoleFeature.analyze.icon
@@ -237,32 +239,32 @@ struct AnalyzeView: View {
                             .foregroundStyle(.secondary)
                         Spacer()
                         Button("Select Listed") {
-                            selection.formUnion(sortedEntries.map(\.path))
+                            selection.formUnion(entries.map(\.path))
                         }
-                        .disabled(sortedEntries.isEmpty)
+                        .disabled(entries.isEmpty)
                         Button("Clear") { selection.removeAll() }
                             .disabled(selection.isEmpty)
                     }
 
-                    if sortedEntries.isEmpty {
+                    if entries.isEmpty {
                         ContentUnavailableView("No Contents", systemImage: "folder", description: Text("Mole found no sized entries."))
                             .frame(height: 180)
                     } else {
-                        VStack(spacing: 0) {
-                            ForEach(sortedEntries) { entry in
+                        LazyVStack(spacing: 0) {
+                            ForEach(entries) { entry in
                                 analysisRow(entry)
-                                if entry.id != sortedEntries.last?.id { Divider() }
+                                if entry.id != entries.last?.id { Divider() }
                             }
                         }
                     }
                 }
 
-                if !sortedLargeFiles.isEmpty {
+                if !largeFiles.isEmpty {
                     MoleCard(title: "Large files", subtitle: "Files at least 100 MB found in this analysis") {
-                        VStack(spacing: 0) {
-                            ForEach(sortedLargeFiles) { entry in
+                        LazyVStack(spacing: 0) {
+                            ForEach(largeFiles) { entry in
                                 analysisRow(entry)
-                                if entry.id != sortedLargeFiles.last?.id { Divider() }
+                                if entry.id != largeFiles.last?.id { Divider() }
                             }
                         }
                     }
@@ -372,8 +374,8 @@ struct AnalyzeView: View {
 
 struct StatusView: View {
     @EnvironmentObject private var runner: MoleRunner
+    @Environment(\.scenePhase) private var scenePhase
     @State private var autoRefresh = false
-    private let timer = Timer.publish(every: 5, on: .main, in: .common).autoconnect()
 
     var body: some View {
         FeaturePage(
@@ -390,7 +392,7 @@ struct StatusView: View {
                 .primaryButton()
                 .disabled(runner.isRunning)
 
-                Toggle("Refresh every 5 seconds", isOn: $autoRefresh)
+                Toggle("Refresh every 5 seconds while active", isOn: $autoRefresh)
                     .toggleStyle(.switch)
                 Spacer()
             }
@@ -413,10 +415,9 @@ struct StatusView: View {
                 runner.refreshStatus()
             }
         }
-        .onReceive(timer) { _ in
-            if autoRefresh && !runner.isRunning {
-                runner.refreshStatus()
-            }
+        .task(id: autoRefresh && scenePhase == .active && !runner.isRunning) {
+            guard autoRefresh, scenePhase == .active, !runner.isRunning else { return }
+            await runner.monitorStatus()
         }
     }
 
@@ -630,7 +631,8 @@ struct PurgeView: View {
     }
 
     var body: some View {
-        FeaturePage(
+        let candidates = filteredCandidates
+        return FeaturePage(
             title: "Project Purge",
             subtitle: "Find rebuildable dependencies, build products, test caches, and generated artifacts.",
             icon: MoleFeature.purge.icon
@@ -677,9 +679,9 @@ struct PurgeView: View {
                 } else {
                     ScrollView {
                         LazyVStack(spacing: 0) {
-                            ForEach(filteredCandidates) { candidate in
+                            ForEach(candidates) { candidate in
                                 purgeRow(candidate)
-                                if candidate.id != filteredCandidates.last?.id { Divider().padding(.leading, 34) }
+                                if candidate.id != candidates.last?.id { Divider().padding(.leading, 34) }
                             }
                         }
                     }
@@ -814,7 +816,8 @@ struct InstallersView: View {
     }
 
     var body: some View {
-        FeaturePage(
+        let candidates = filteredCandidates
+        return FeaturePage(
             title: "Installers",
             subtitle: "Find DMG, PKG, MPKG, ISO, XIP, and installer ZIP files in supported locations.",
             icon: MoleFeature.installers.icon
@@ -842,9 +845,9 @@ struct InstallersView: View {
                     TextField("Search files, paths, or sources", text: $search)
                         .textFieldStyle(.roundedBorder)
                     Button("Select All") {
-                        selection = Set(filteredCandidates.map(\.id))
+                        selection = Set(candidates.map(\.id))
                     }
-                    .disabled(filteredCandidates.isEmpty)
+                    .disabled(candidates.isEmpty)
                     Button("Clear") { selection.removeAll() }
                         .disabled(selection.isEmpty)
                 }
@@ -855,9 +858,9 @@ struct InstallersView: View {
                 } else {
                     ScrollView {
                         LazyVStack(spacing: 0) {
-                            ForEach(filteredCandidates) { candidate in
+                            ForEach(candidates) { candidate in
                                 installerRow(candidate)
-                                if candidate.id != filteredCandidates.last?.id { Divider().padding(.leading, 34) }
+                                if candidate.id != candidates.last?.id { Divider().padding(.leading, 34) }
                             }
                         }
                     }

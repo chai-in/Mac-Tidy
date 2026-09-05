@@ -408,6 +408,7 @@ func TestCollectorKeepsLiveProcessDataWhenApplyingEnrichment(t *testing.T) {
 
 func TestMetricsSnapshotFieldsHaveCollectionClassifications(t *testing.T) {
 	classified := map[string]string{
+		"CollectionError":       "recomputed",
 		"CollectedAt":           "fast",
 		"Host":                  "fast",
 		"Platform":              "fast",

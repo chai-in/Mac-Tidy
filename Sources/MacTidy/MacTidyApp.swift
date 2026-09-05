@@ -25,6 +25,7 @@ final class MacTidyAppDelegate: NSObject, NSApplicationDelegate {
     private var terminationObserver: AnyCancellable?
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        runner?.stopStatusMonitoring()
         guard let runner, runner.isRunning else { return .terminateNow }
         let alert = NSAlert()
         alert.messageText = "Stop the current task and quit?"

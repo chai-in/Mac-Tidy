@@ -1,7 +1,7 @@
 import Foundation
 
 enum AppMetadata {
-    static let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0.1"
+    static let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0.2"
     static let bundledMoleVersion = Bundle.main.object(forInfoDictionaryKey: "MoleEngineVersion") as? String ?? "1.53.0"
     static let bundledMoleCommit = Bundle.main.object(forInfoDictionaryKey: "MoleEngineCommit") as? String
         ?? "1b9023b5f151c2d963bbcb9cb658f4824137b8aa"
@@ -25,17 +25,24 @@ enum MoleRisk: Equatable {
     }
 }
 
+enum MoleOutputFormat: Equatable {
+    case text
+    case json
+}
+
 struct MoleInvocation: Equatable {
     let label: String
     let arguments: [String]
     let risk: MoleRisk
     let environment: [String: String]
+    let outputFormat: MoleOutputFormat
 
-    init(label: String, arguments: [String], risk: MoleRisk, environment: [String: String] = [:]) {
+    init(label: String, arguments: [String], risk: MoleRisk, environment: [String: String] = [:], outputFormat: MoleOutputFormat = .text) {
         self.label = label
         self.arguments = arguments
         self.risk = risk
         self.environment = environment
+        self.outputFormat = outputFormat
     }
 }
 
@@ -80,7 +87,8 @@ enum MoleCommands {
         MoleInvocation(
             label: "Load \(mode.title.lowercased())",
             arguments: [mode.rawValue, "--gui-whitelist-list"],
-            risk: .readOnly
+            risk: .readOnly,
+            outputFormat: .json
         )
     }
 
@@ -88,14 +96,16 @@ enum MoleCommands {
         MoleInvocation(
             label: "Save \(mode.title.lowercased())",
             arguments: [mode.rawValue, "--gui-whitelist-save"] + patterns,
-            risk: .configuration
+            risk: .configuration,
+            outputFormat: .json
         )
     }
 
     static let uninstallList = MoleInvocation(
         label: "Scan applications",
         arguments: ["uninstall", "--list"],
-        risk: .readOnly
+        risk: .readOnly,
+        outputFormat: .json
     )
 
     static func uninstall(paths: [String], preview: Bool, permanent: Bool, debug: Bool) -> MoleInvocation {
@@ -127,7 +137,7 @@ enum MoleCommands {
     static func analyzeJSON(path: String?) -> MoleInvocation {
         var arguments = ["analyze", "--json"]
         if let path = path?.trimmedNil { arguments.append(path) }
-        return MoleInvocation(label: "Analyze storage", arguments: arguments, risk: .readOnly)
+        return MoleInvocation(label: "Analyze storage", arguments: arguments, risk: .readOnly, outputFormat: .json)
     }
 
     static func moveToTrash(paths: [String]) -> MoleInvocation {
@@ -135,21 +145,31 @@ enum MoleCommands {
             label: "Move selected items to Trash",
             arguments: ["analyze", "--trash-json"] + paths,
             risk: .recoverableMutation,
-            environment: confirmed
+            environment: confirmed,
+            outputFormat: .json
         )
     }
 
     static let statusJSON = MoleInvocation(
         label: "Refresh system health",
         arguments: ["status", "--json"],
-        risk: .readOnly
+        risk: .readOnly,
+        outputFormat: .json
+    )
+
+    static let statusWatch = MoleInvocation(
+        label: "Live system health",
+        arguments: ["status", "--watch", "--interval", "5s"],
+        risk: .readOnly,
+        outputFormat: .json
     )
 
     static func history(limit: Int) -> MoleInvocation {
         MoleInvocation(
             label: "Load activity history",
             arguments: ["history", "--json", "--limit", "\(min(max(limit, 1), 200))"],
-            risk: .readOnly
+            risk: .readOnly,
+            outputFormat: .json
         )
     }
 
@@ -157,7 +177,7 @@ enum MoleCommands {
         var arguments = ["purge", "--gui-list"]
         if includeEmpty { arguments.append("--include-empty") }
         if debug { arguments.append("--debug") }
-        return MoleInvocation(label: "Scan project artifacts", arguments: arguments, risk: .readOnly)
+        return MoleInvocation(label: "Scan project artifacts", arguments: arguments, risk: .readOnly, outputFormat: .json)
     }
 
     static func purgeRemove(paths: [String], preview: Bool, includeEmpty: Bool, debug: Bool) -> MoleInvocation {
@@ -178,21 +198,23 @@ enum MoleCommands {
     static let purgePathsList = MoleInvocation(
         label: "Load project scan paths",
         arguments: ["purge", "--gui-paths-list"],
-        risk: .readOnly
+        risk: .readOnly,
+        outputFormat: .json
     )
 
     static func purgePathsSave(_ paths: [String]) -> MoleInvocation {
         MoleInvocation(
             label: "Save project scan paths",
             arguments: ["purge", "--gui-paths-save"] + paths,
-            risk: .configuration
+            risk: .configuration,
+            outputFormat: .json
         )
     }
 
     static func installersList(debug: Bool) -> MoleInvocation {
         var arguments = ["installer", "--gui-list"]
         if debug { arguments.append("--debug") }
-        return MoleInvocation(label: "Scan installer files", arguments: arguments, risk: .readOnly)
+        return MoleInvocation(label: "Scan installer files", arguments: arguments, risk: .readOnly, outputFormat: .json)
     }
 
     static func installersRemove(paths: [String], preview: Bool, debug: Bool) -> MoleInvocation {
@@ -220,7 +242,8 @@ enum MoleCommands {
     static let touchIDStatus = MoleInvocation(
         label: "Check Touch ID configuration",
         arguments: ["touchid", "--gui-status"],
-        risk: .readOnly
+        risk: .readOnly,
+        outputFormat: .json
     )
 
     static func touchID(_ action: TouchIDAction, preview: Bool = false) -> MoleInvocation {
@@ -483,6 +506,7 @@ struct StatusSnapshot: Decodable {
     }
 
     let collectedAt: String?
+    let collectionError: String?
     let host: String
     let uptime: String
     let hardware: Hardware?
@@ -544,17 +568,20 @@ struct HistoryReport: Decodable {
 
 struct CommandResult {
     let invocation: MoleInvocation
-    let standardOutput: String
-    let standardError: String
+    let standardOutputData: Data
+    let standardErrorData: Data
     let exitCode: Int32
     let cancelled: Bool
+    var outputTruncated = false
+    var outputError: String?
+    var diagnostic: String?
 
-    var succeeded: Bool { exitCode == 0 && !cancelled }
+    var succeeded: Bool { exitCode == 0 && !cancelled && outputError == nil }
+    var standardOutput: String { ConsoleOutput.clean(String(decoding: standardOutputData, as: UTF8.self)) }
+    var standardError: String { ConsoleOutput.clean(String(decoding: standardErrorData, as: UTF8.self)) }
 
     var displayOutput: String {
-        [standardOutput, standardError]
-            .filter { !$0.isEmpty }
-            .joined(separator: standardOutput.isEmpty || standardError.isEmpty ? "" : "\n")
+        ConsoleOutput.display(stdout: standardOutputData, stderr: standardErrorData, truncated: outputTruncated)
     }
 }
 

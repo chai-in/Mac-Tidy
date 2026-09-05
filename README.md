@@ -44,6 +44,28 @@ On first open, Mac Tidy explains why complete scans need Full Disk Access and
 opens the correct Privacy & Security page. macOS requires the user to grant
 this permission manually. Limited-access use remains available.
 
+## Resource use
+
+Mac Tidy runs locally. Packaged status and analysis requests execute the
+bundled Go helpers directly. Automatic status refresh reuses a single warm
+collector and pauses when the Status screen is inactive or another task runs.
+Hardware and other slow-changing metrics follow the engine's existing refresh
+cadence; CPU, memory, network, and process measurements continue to refresh.
+
+Activity is streamed in small batches and retains the latest 128 KiB per
+output stream in memory. Earlier text is explicitly marked as omitted, while
+the engine's operation history remains available. Structured scan results use
+their original JSON bytes with a 32 MiB limit; oversized results fail without
+publishing a partial plan. Folder sizes and mutation candidates are still
+rescanned and revalidated.
+
+Large result lists sort once per render and load rows as needed. Preview
+packages use size-optimized native code, stripped symbols, exact-resolution
+icons, and lossless ZIP compression.
+
+See [PERFORMANCE.md](PERFORMANCE.md) for measurements, tradeoffs, and
+reproduction steps.
+
 ## Build
 
 Requirements:
