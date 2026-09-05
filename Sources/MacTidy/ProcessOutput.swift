@@ -37,6 +37,8 @@ private struct ByteTail {
     private(set) var count = 0
     private(set) var truncated = false
 
+    init(limit: Int) { self.limit = limit }
+
     mutating func append(_ data: Data) {
         guard !data.isEmpty else { return }
         if data.count >= limit {
@@ -70,6 +72,8 @@ private struct ByteTail {
 private struct DiagnosticCapture {
     private var pending = Data()
     private(set) var first: String?
+
+    init() {}
 
     mutating func append(_ data: Data) {
         guard first == nil else { return }

@@ -10,6 +10,9 @@ not a universal reduction in the app's total resource use.
 | 16 MiB activity capture, elapsed time | 0.905 s | 0.212 s | 76.6% lower |
 | Six status updates at a nominal five-second interval, CPU time | 7.886 s | 2.025 s | 74.3% lower |
 | 1,000-file analysis, median of four runs | 0.320 s | 0.081 s | 74.7% lower |
+| Installed application, logical file bytes | 14.37 MB | 12.72 MB | 11.4% smaller |
+| DMG download | 6.31 MB | 5.97 MB | 5.5% smaller |
+| ZIP download | 5.65 MB | 5.33 MB | 5.6% smaller |
 
 The activity workload generates 16 MiB from a child process and measures the
 native runner without a visible SwiftUI window. The status comparison uses
