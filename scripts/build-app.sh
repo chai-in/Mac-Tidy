@@ -78,6 +78,16 @@ ditto "$VENDOR_DIR/MODIFICATIONS.md" "$ENGINE_PATH/MODIFICATIONS.md"
 ditto "$VENDOR_DIR/TRADEMARK.md" "$ENGINE_PATH/TRADEMARK.md"
 ditto "$ENGINE_BUILD/analyze-go" "$ENGINE_PATH/bin/analyze-go"
 ditto "$ENGINE_BUILD/status-go" "$ENGINE_PATH/bin/status-go"
+# v0.0.1 declares MIT in its README but its module archive has no license file.
+# Supply the upstream notice only for that exact version; do not replace a
+# notice already provided by the vendored module.
+LOCALE_READER="$PACKAGE_TEMP/go-vendor/github.com/mattn/go-localereader"
+if [[ -d "$LOCALE_READER" ]] \
+    && grep -Fxq '# github.com/mattn/go-localereader v0.0.1' "$PACKAGE_TEMP/go-vendor/modules.txt" \
+    && [[ ! -f "$LOCALE_READER/LICENSE" ]]; then
+    ditto "$PROJECT_DIR/Resources/ThirdParty/go-localereader/LICENSE" "$LOCALE_READER/LICENSE"
+fi
+
 python3 - "$PACKAGE_TEMP/go-vendor" "$CONTENTS/Resources/ThirdPartyNotices.txt" <<'PY'
 from pathlib import Path
 import sys
@@ -87,10 +97,10 @@ notices = ["Mac Tidy includes the following open-source library notices.\n"]
 for path in sorted(source.rglob("*")):
     if path.is_file() and path.name.upper().startswith(("LICENSE", "COPYING", "NOTICE")):
         notices.append("\n--- " + str(path.relative_to(source)) + " ---\n")
-        notices.append(path.read_text(errors="replace"))
+        notices.append(path.read_text(encoding="utf-8"))
 if len(notices) == 1:
     raise SystemExit("No third-party license notices found")
-Path(sys.argv[2]).write_text("\n".join(notices))
+Path(sys.argv[2]).write_text("\n".join(notices), encoding="utf-8")
 PY
 
 BASE_ICON="$PACKAGE_TEMP/mac-tidy-1024.png"

@@ -36,3 +36,28 @@ path-validation behavior.
 
 These changes are distributed under GNU GPL v3 only. Mac Tidy is independent
 from and not endorsed by the Mole project. See `TRADEMARK.md`.
+
+## Files changed against the recorded upstream revision
+
+The list below compares the vendored tree at Mac Tidy commit `c1a1ad5` with
+[Mole commit `1b9023b5f151c2d963bbcb9cb658f4824137b8aa`](https://github.com/tw93/Mole/tree/1b9023b5f151c2d963bbcb9cb658f4824137b8aa).
+Paths are relative to `Vendor/Mole`; later changes may extend this list. The
+changes described above were made on the dates stated above; this list does not
+assign a specific date to every individual file.
+
+Existing upstream files changed in this snapshot:
+
+- `bin/clean.sh`, `bin/installer.sh`, `bin/optimize.sh`, `bin/purge.sh`, `bin/touchid.sh`, `bin/uninstall.sh`
+- `cmd/analyze/main.go`
+- `cmd/status/main_test.go`, `cmd/status/metrics.go`, `cmd/status/watch.go`
+- `lib/clean/project.sh`, `lib/core/sudo.sh`, `lib/manage/purge_paths.sh`, `lib/manage/whitelist.sh`, `lib/optimize/tasks.sh`, `lib/uninstall/batch.sh`
+- `tests/optimize_probe_outcomes.bats`, `tests/purge_config_paths.bats`
+
+Files added by Mac Tidy in this snapshot:
+
+- `cmd/analyze/gui.go`, `cmd/analyze/gui_test.go`, `cmd/status/watch_test.go`
+- `lib/core/gui.sh`, `tests/gui_bridge.bats`, `MODIFICATIONS.md`
+
+The upstream license and trademark notices remain in this directory. Other
+bundled libraries retain their own license terms; the packaging script gathers
+their notices separately.
