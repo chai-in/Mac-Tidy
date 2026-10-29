@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="260" viewBox="0 0 1200 260" fill="none" role="img" aria-labelledby="title desc">
+  <title id="title">Mac Tidy — Inspect your Mac. Choose what changes.</title>
+  <desc id="desc">A monitor and adjustment controls illustrate deliberate system maintenance. Decorative artwork, not an application screenshot.</desc>
+  <rect width="1200" height="260" rx="16" fill="#111820"/>
+  <path d="M0 240H1200" stroke="#29333E"/>
+  <rect x="40" y="43" width="4" height="169" rx="2" fill="#A3D4BF"/>
+  <text x="66" y="63" fill="#A3D4BF" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="14" font-weight="600" letter-spacing="2.4">NATIVE MACOS / SYSTEM TOOLS</text>
+  <text x="62" y="136" fill="#F4F0EB" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="62" font-weight="700" letter-spacing="-1.8">Mac Tidy</text>
+  <text x="66" y="176" fill="#B9C3CE" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="25">Inspect your Mac. Choose what changes.</text>
+  <text x="66" y="213" fill="#8192A2" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" font-weight="600" letter-spacing="1.4">APPLE SILICON · POWERED BY MOLE · IN DEVELOPMENT</text>
+  <rect x="855" y="50" width="280" height="133" rx="14" stroke="#3C514D" stroke-width="2" fill="#19272A"/>
+      <path d="M855 80H1135" stroke="#3C514D" stroke-width="2"/>
+      <g fill="#6A837D"><circle cx="872" cy="65" r="3"/><circle cx="883" cy="65" r="3"/><circle cx="894" cy="65" r="3"/></g>
+      <g stroke="#A3D4BF" stroke-width="3" stroke-linecap="round"><path d="M883 105H1107M883 129H1107M883 153H1107"/><circle cx="941" cy="105" r="7" fill="#19272A"/><circle cx="1041" cy="129" r="7" fill="#19272A"/><circle cx="977" cy="153" r="7" fill="#19272A"/></g>
+      <path d="M965 183V201H1025V183M947 201H1043" stroke="#3C514D" stroke-width="2"/>
+</svg>
