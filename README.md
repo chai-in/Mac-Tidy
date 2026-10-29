@@ -8,8 +8,6 @@ Mac Tidy brings storage analysis, cleanup previews, app removal, and system heal
 
 > **In development — build from source.** No public binary release is available yet. Targets **Apple silicon Macs running macOS 14+**. Local preview packages are ad-hoc signed and **not Apple-notarized**.
 
-[![CI](https://github.com/chai-in/Mac-Tidy/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/chai-in/Mac-Tidy/actions/workflows/ci.yml)
-
 ## Features
 
 | Task | What you can do |
